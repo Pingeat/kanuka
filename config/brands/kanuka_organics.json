@@ -1,0 +1,26 @@
+{
+  "name": "Kanuka Organics",
+  "logo_url": "https://kanukaorganics.com/logo.png",
+  "bulk_contact": {
+    "phone": "+919226454238",
+    "email": "hello@kanukaorganics.com"
+  },
+  "catalog": [
+    {
+      "id": "6xpxtkaoau",
+      "name": "Palm Jaggery - Powdered (700gms)",
+      "price": 760.00,
+      "original_price": 910.00,
+      "category": "Jaggery Products",
+      "description": "Premium quality palm jaggery in powdered form"
+    },
+    {
+      "id": "kyygkhdlxf",
+      "name": "Palm Jaggery - Cubes (1 KG)",
+      "price": 1100.00,
+      "original_price": 1300.00,
+      "category": "Jaggery Products",
+      "description": "Premium quality palm jaggery in cube form"
+    }
+  ]
+}

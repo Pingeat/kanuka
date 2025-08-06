@@ -608,12 +608,14 @@ def send_order_alert(branch, order_id, items, total, sender, delivery_address, d
     
     
     delivery_address = redis_state.get_complete_delivery_info(sender)
-    
+    text_address = delivery_address.get('text_address', 'Address not provided')
+    maps_link = delivery_address.get('maps_link', 'Map link not available')
+
     # Add delivery address information
     if delivery_type == "Delivery":
         message += "DELIVERY ADDRESS:\n"
-        message += f"{delivery_address["text_address"]}\n"
-        message += f"{delivery_address["maps_link"]}\n"
+        message += f"{text_address}\n"
+        message += f"{maps_link}\n\n"
     
     message += "ORDER ITEMS:\n"
     for item in items:

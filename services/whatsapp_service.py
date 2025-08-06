@@ -612,8 +612,8 @@ def send_order_alert(branch, order_id, items, total, sender, delivery_address, d
     # Add delivery address information
     if delivery_type == "Delivery":
         message += "DELIVERY ADDRESS:\n"
-        message += f"{delivery_address["text_address"]}\n\n"
-        message += f"{delivery_address["maps_link"]}\n\n"
+        message += f"{delivery_address["text_address"]}\n"
+        message += f"{delivery_address["maps_link"]}\n"
     
     message += "ORDER ITEMS:\n"
     for item in items:

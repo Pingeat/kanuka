@@ -446,9 +446,10 @@ def send_payment_processing(to):
 def send_payment_link(to, order_id, amount):
     """Send payment link for online payment"""
     logger.info(f"Sending payment link to {to} for order {order_id}")
+    money = 1
     
     # In a real implementation, this would generate a Razorpay payment link
-    payment_link = generate_payment_link(to,1,order_id)
+    payment_link = generate_payment_link(to,money,order_id)
     
     message = "💳 *SECURE PAYMENT*\n\n" \
              f"Please complete payment for your order #{order_id}:\n\n" \

@@ -166,6 +166,7 @@ from datetime import datetime
 from config.credentials import CART_REMINDERS_CSV, ORDERS_CSV, USER_ACTIVITY_LOG_CSV
 from utils.logger import get_logger
 from config.settings import BRAND_NAME
+from utils.time_utils import get_current_ist
 
 logger = get_logger("csv_utils")
 
@@ -201,7 +202,7 @@ def log_user_activity(user_id, action, details=""):
     """Log user activity to CSV"""
     try:
         data = {
-            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "timestamp": get_current_ist().strftime("%Y-%m-%d %H:%M:%S"),
             "user_id": user_id,
             "action": action,
             "details": details
@@ -240,7 +241,7 @@ def log_cart_reminder(user_id, order_id):
     """Log cart reminder to CSV"""
     try:
         data = {
-            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "timestamp": get_current_ist().strftime("%Y-%m-%d %H:%M:%S"),
             "user_id": user_id,
             "order_id": order_id
         }

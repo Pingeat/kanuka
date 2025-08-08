@@ -8,6 +8,8 @@ from datetime import datetime, time, timedelta
 import threading
 import time as time_module
 
+from utils.time_utils import get_current_ist
+
 logger = get_logger("reminder_handler")
 
 def process_cart_reminders():
@@ -39,7 +41,7 @@ def schedule_daily_tasks():
     
     # Run continuously
     while True:
-        now = datetime.now()
+        now = get_current_ist()
         
         # Process cart reminders every 15 minutes
         if now.minute % 15 == 0:

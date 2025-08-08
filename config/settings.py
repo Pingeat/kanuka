@@ -38,13 +38,15 @@ GREETING_MESSAGE = "🌿 *Welcome to Kanuka Organics*\n\n" \
 
 # Branch contacts (for order notifications)
 BRANCH_CONTACTS = {
-    "Kondapur": "916302588275",
-    "Madhapur": "917075442898",
-    "Manikonda": "919392016847",
-    "Nizampet": "916303241076",
-    "Nanakramguda": "916303237242",
-    "Madhapur": "918074301029"
+    "Kondapur": ["916302588275"],
+    "Madhapur": ["917075442898"],
+    "Manikonda": ["919392016847"],
+    "Nizampet": ["916303241076"],
+    "Nanakramguda": ["916303237242"],
+    "Madhapur": ["919640112005"]
 }
+
+OTHER_NUMBERS = ["9640112005", "9226454238","8074301029"]
 
 # Branch coordinates (latitude, longitude)
 BRANCH_COORDINATES = {

@@ -16,11 +16,13 @@ from services.whatsapp_service import (
 )
 import math
 
+from utils.time_utils import get_current_ist
+
 logger = get_logger("order_service")
 
 def generate_order_id():
     """Generate a unique order ID"""
-    return f"ORD{datetime.now().strftime('%Y%m%d')}{str(uuid.uuid4())[:4].upper()}"
+    return f"ORD{get_current_ist().strftime('%Y%m%d')}{str(uuid.uuid4())[:4].upper()}"
 
 def calculate_distance(lat1, lon1, lat2, lon2):
     """Calculate distance between two points in km using Haversine formula"""
@@ -436,7 +438,7 @@ def place_order(user_id, delivery_type, address=None, payment_method="Cash on De
         "items": cart["items"],
         "total": cart["total"],
         "status": ORDER_STATUS["PAID"] if payment_method == "Cash on Delivery" else ORDER_STATUS["PENDING"],
-        "order_date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "order_date": get_current_ist().strftime("%Y-%m-%d %H:%M:%S"),
         "delivery_type": delivery_type,
         "delivery_address": delivery_address,
         "text_address": address,
@@ -461,7 +463,7 @@ def place_order(user_id, delivery_type, address=None, payment_method="Cash on De
         cart["items"],
         cart["total"],
         user_id,
-        delivery_address,
+        payment_method,
         delivery_type
     )
     
@@ -469,6 +471,45 @@ def place_order(user_id, delivery_type, address=None, payment_method="Cash on De
     send_final_order_confirmation(user_id, order_id, address)
     
     return True, f"Order #{order_id} placed successfully!"
+
+# def confirm_order(whatsapp_number, order_id, payment_method):
+#     """Confirm order after payment - only for online payments"""
+#     logger.info(f"Confirming order {order_id} for {whatsapp_number}")
+    
+#     # Get pending order
+#     pending_order_data = redis_state.redis.get(f"pending_order:{order_id}")
+#     if not pending_order_data:
+#         logger.error(f"Pending order {order_id} not found")
+#         return False
+    
+#     # Decode if pending_order_data is bytes
+#     if isinstance(pending_order_data, bytes):
+#         pending_order_data = pending_order_data.decode('utf-8')
+    
+#     try:
+#         pending_order = json.loads(pending_order_data)
+        
+#         # Extract details
+#         user_id = pending_order["user_id"]
+#         cart = pending_order["cart"]
+#         delivery_type = pending_order["delivery_type"]
+#         address = pending_order["delivery_address"]
+        
+#         # Place the actual order (this will send all notifications)
+#         success, message = place_order(user_id, delivery_type, address=address, payment_method="online")
+        
+#         if success:
+#             # Delete pending order
+#             redis_state.redis.delete(f"pending_order:{order_id}")
+#             return True
+#         else:
+#             logger.error(f"Failed to place order from pending order: {message}")
+#             return False
+#     except Exception as e:
+#         logger.error(f"Error processing pending order: {str(e)}")
+#         return False
+
+
 
 def confirm_order(whatsapp_number, order_id, payment_method):
     """Confirm order after payment - only for online payments"""
@@ -499,6 +540,11 @@ def confirm_order(whatsapp_number, order_id, payment_method):
         if success:
             # Delete pending order
             redis_state.redis.delete(f"pending_order:{order_id}")
+            
+            # CRITICAL FIX: Clear the cart and reset state
+            redis_state.clear_cart(user_id)
+            redis_state.clear_user_state(user_id)
+            
             return True
         else:
             logger.error(f"Failed to place order from pending order: {message}")

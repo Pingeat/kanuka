@@ -446,10 +446,9 @@ def send_payment_processing(to):
 def send_payment_link(to, order_id, amount):
     """Send payment link for online payment"""
     logger.info(f"Sending payment link to {to} for order {order_id}")
-    money = 1
     
     # In a real implementation, this would generate a Razorpay payment link
-    payment_link = generate_payment_link(to,money,order_id)
+    payment_link = generate_payment_link(to,amount,order_id)
     
     message = "💳 *SECURE PAYMENT*\n\n" \
              f"Please complete payment for your order #{order_id}:\n\n" \
@@ -590,28 +589,84 @@ def send_final_order_confirmation(to, order_id, address):
 
 
 
-def send_order_alert(branch, order_id, items, total, sender, delivery_address, delivery_type):
+# def send_order_alert(branch, order_id, items, total, sender, delivery_address, delivery_type):
+#     """Send order alert to branch with delivery address information"""
+#     logger.info(f"Sending order alert to {branch} for order {order_id}")
+    
+#     from config.settings import BRANCH_CONTACTS
+    
+#     if branch not in BRANCH_CONTACTS:
+#         logger.error(f"Branch {branch} not found in branch contacts")
+#         return
+    
+#     to = BRANCH_CONTACTS[branch]
+    
+#     message = "🔔 *NEW ORDER ALERT*\n\n" \
+#              f"Order ID: #{order_id}\n" \
+#              f"Customer: {sender}\n" \
+#              f"Delivery Type: {delivery_type}\n\n"
+    
+    
+#     delivery_address = redis_state.get_complete_delivery_info(sender)
+#     text_address = delivery_address.get('text_address', 'Address not provided')
+#     maps_link = delivery_address.get('maps_link', 'Map link not available')
+
+#     # Add delivery address information
+#     if delivery_type == "Delivery":
+#         message += "DELIVERY ADDRESS:\n"
+#         message += f"{text_address}\n"
+#         message += f"{maps_link}\n\n"
+    
+#     message += "ORDER ITEMS:\n"
+#     for item in items:
+#         item_total = item["quantity"] * item["price"]
+#         message += f"• {item['name']} x{item['quantity']} = ₹{item_total}\n"
+    
+#     message += f"\n*TOTAL*: ₹{total}\n\n" \
+#              "Please prepare this order as soon as possible."
+    
+#     return send_text_message(to, message)
+
+
+
+
+
+def send_order_alert(branch, order_id, items, total, sender, payment_mode, delivery_type):
     """Send order alert to branch with delivery address information"""
     logger.info(f"Sending order alert to {branch} for order {order_id}")
     
-    from config.settings import BRANCH_CONTACTS
+    from config.settings import BRANCH_CONTACTS, OTHER_NUMBERS
     
-    if branch not in BRANCH_CONTACTS:
+    # Get all recipient numbers
+    recipients = []
+    
+    # Add branch contact if exists
+    if branch in BRANCH_CONTACTS:
+        recipients.append(BRANCH_CONTACTS[branch])
+    else:
         logger.error(f"Branch {branch} not found in branch contacts")
-        return
     
-    to = BRANCH_CONTACTS[branch]
+    # Add all numbers from OTHER_NUMBERS
+    for number in OTHER_NUMBERS:
+        # Format number to WhatsApp format if needed (add country code if missing)
+        if not number.startswith("91"):
+            formatted_number = "91" + number
+        else:
+            formatted_number = number
+        recipients.append(formatted_number)
     
+    # Get complete delivery info
+    delivery_info = redis_state.get_complete_delivery_info(sender)
+    text_address = delivery_info.get('text_address', 'Address not provided')
+    maps_link = delivery_info.get('maps_link', 'Map link not available')
+
     message = "🔔 *NEW ORDER ALERT*\n\n" \
              f"Order ID: #{order_id}\n" \
              f"Customer: {sender}\n" \
-             f"Delivery Type: {delivery_type}\n\n"
+             f"Delivery Type: {delivery_type}\n\n"\
+             f"Payment Method: {payment_mode}\n\n"\
+             f"Branch: {branch}\n\n"\
     
-    
-    delivery_address = redis_state.get_complete_delivery_info(sender)
-    text_address = delivery_address.get('text_address', 'Address not provided')
-    maps_link = delivery_address.get('maps_link', 'Map link not available')
-
     # Add delivery address information
     if delivery_type == "Delivery":
         message += "DELIVERY ADDRESS:\n"
@@ -626,4 +681,11 @@ def send_order_alert(branch, order_id, items, total, sender, delivery_address, d
     message += f"\n*TOTAL*: ₹{total}\n\n" \
              "Please prepare this order as soon as possible."
     
-    return send_text_message(to, message)
+    # Send to all recipients
+    results = []
+    for recipient in recipients:
+        logger.info(f"Sending order alert to {recipient}")
+        result = send_text_message(recipient, message)
+        results.append(result)
+    
+    return results

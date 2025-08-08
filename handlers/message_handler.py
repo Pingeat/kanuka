@@ -30,6 +30,8 @@ from utils.csv_utils import log_user_activity
 import re
 import math
 
+from utils.time_utils import get_current_ist
+
 logger = get_logger("message_handler")
 
 def handle_incoming_message(data):
@@ -166,10 +168,10 @@ def handle_button_response(sender, button_id, current_state):
     # Handle payment options
     elif current_state and current_state.get("step") == "SELECTING_PAYMENT_METHOD":
         if button_id == "PAY_NOW":
-            redis_state.set_payment_method(sender, "Pay Now")
+            redis_state.set_payment_method(sender, "online")
             # Ask for address first
             send_address_request(sender)
-            redis_state.set_user_state(sender, {"step": "WAITING_FOR_ADDRESS", "payment_method": "Pay Now"})
+            redis_state.set_user_state(sender, {"step": "WAITING_FOR_ADDRESS", "payment_method": "online"})
         elif button_id == "CASH_ON_DELIVERY":
             redis_state.set_payment_method(sender, "Cash on Delivery")
             # Ask for address first
@@ -208,7 +210,6 @@ def handle_text_message(sender, text, current_state):
         success, message = update_order_status_from_command(text)
         send_text_message(sender, message)
         return
-    
     # Handle address input
     if current_state and current_state.get("step") == "WAITING_FOR_ADDRESS":
         payment_method = current_state.get("payment_method", "Cash on Delivery")
@@ -234,7 +235,7 @@ def handle_text_message(sender, text, current_state):
                 redis_state.clear_user_state(sender)
             else:
                 send_text_message(sender, f"❌ Failed to place order: {message}")
-        elif payment_method == "Pay Now":
+        elif payment_method == "online":
             # For online payment, generate payment link and wait for confirmation
             # send_payment_processing(sender)
             
@@ -249,7 +250,7 @@ def handle_text_message(sender, text, current_state):
                 "delivery_type": delivery_type,
                 "delivery_address": address,
                 "status": "PENDING_PAYMENT",
-                "payment_method": "Pay Now"
+                "payment_method": "online"
             }
             redis_state.redis.setex(f"pending_order:{order_id}", 3600, json.dumps(pending_order))
             
@@ -397,4 +398,4 @@ def calculate_distance(lat1, lon1, lat2, lon2):
 
 def generate_order_id():
     """Generate a unique order ID"""
-    return f"ORD{datetime.now().strftime('%Y%m%d')}{str(uuid.uuid4())[:4].upper()}"
+    return f"ORD{get_current_ist().strftime('%Y%m%d')}{str(uuid.uuid4())[:4].upper()}"

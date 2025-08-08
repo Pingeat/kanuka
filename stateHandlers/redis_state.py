@@ -404,6 +404,8 @@ from config.credentials import REDIS_URL
 from utils.logger import get_logger
 from datetime import datetime, timedelta
 
+from utils.time_utils import get_current_ist
+
 logger = get_logger("redis_state")
 
 class RedisState:
@@ -434,7 +436,7 @@ class RedisState:
         """Set user state in Redis"""
         try:
             # Add timestamp for debugging
-            state["last_updated"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            state["last_updated"] = get_current_ist().strftime("%Y-%m-%d %H:%M:%S")
             self.redis.setex(f"user:{user_id}:state", 3600, json.dumps(state))  # 1 hour expiry
             logger.debug(f"Set user state for {user_id}: {state}")
             return True
@@ -633,7 +635,7 @@ class RedisState:
             
             # Update status
             order["status"] = status
-            order["updated_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            order["updated_at"] = get_current_ist().strftime("%Y-%m-%d %H:%M:%S")
             
             # Remove old order
             order_json = json.dumps(order, sort_keys=True)
@@ -680,7 +682,7 @@ class RedisState:
     def schedule_cart_reminder(self, user_id, order_id, delay_hours=2):
         """Schedule a cart reminder"""
         try:
-            reminder_time = datetime.now() + timedelta(hours=delay_hours)
+            reminder_time = get_current_ist() + timedelta(hours=delay_hours)
             reminder_data = {
                 "user_id": user_id,
                 "order_id": order_id,
@@ -717,7 +719,7 @@ class RedisState:
                 reminder = json.loads(reminder_str)
                 scheduled_at = datetime.strptime(reminder["scheduled_at"], "%Y-%m-%d %H:%M:%S")
                 
-                if datetime.now() >= scheduled_at:
+                if get_current_ist() >= scheduled_at:
                     reminders.append(reminder)
             
             return reminders

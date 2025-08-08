@@ -223,25 +223,20 @@ def handle_text_message(sender, text, current_state):
         
         if payment_method == "Cash on Delivery":
             # For Cash on Delivery, immediately place the order
-            order_id, message = place_order(sender, delivery_type)
+            # FIXED: Only call place_order() which handles everything
+            success, message = place_order(sender, delivery_type, address=address, payment_method=payment_method)
             
-            if order_id:
-                # Confirm the order
-                confirm_order(sender, order_id, payment_method, address=address)
-                
+            if success:
                 # Clear the cart
                 redis_state.clear_cart(sender)
                 
-                # Send final confirmation
-                send_final_order_confirmation(sender, order_id, address)
+                # Reset state
+                redis_state.clear_user_state(sender)
             else:
                 send_text_message(sender, f"❌ Failed to place order: {message}")
-            
-            # Reset state
-            redis_state.clear_user_state(sender)
         elif payment_method == "Pay Now":
             # For online payment, generate payment link and wait for confirmation
-            send_payment_processing(sender)
+            # send_payment_processing(sender)
             
             # Generate order ID but don't place order yet
             order_id = generate_order_id()
@@ -267,10 +262,6 @@ def handle_text_message(sender, text, current_state):
                 redis_state.redis.delete(f"pending_order:{order_id}")
                 # Reset state
                 redis_state.clear_user_state(sender)
-        else:
-            send_text_message(sender, "❌ Invalid payment method. Please try again.")
-            # Reset state
-            redis_state.clear_user_state(sender)
         
         return
     

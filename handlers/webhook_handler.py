@@ -214,11 +214,13 @@
 
 
 # handlers/webhook_handler.py
+import json
 from flask import Blueprint, request, jsonify
 from handlers.message_handler import handle_incoming_message
 from services.order_service import confirm_order
 from services.whatsapp_service import send_text_message
 from config.credentials import META_VERIFY_TOKEN
+from stateHandlers import redis_state
 from utils.logger import get_logger
 from handlers.reminder_handler import start_scheduler
 
@@ -253,36 +255,129 @@ def verify_webhook():
         return "Verification failed", 403
 
 # Payment success webhook
+# @webhook_bp.route("/payment-success", methods=["GET"])
+# def payment_success():
+#     """Handle payment success callback"""
+#     logger.info("Payment success callback received.")
+#     whatsapp_number = request.args.get("whatsapp")
+#     order_id = request.args.get("order_id")
+    
+#     if whatsapp_number and order_id:
+#         # Confirm the order with payment method
+#         confirm_order(whatsapp_number, order_id, "Pay Now")
+#         return "Payment confirmed", 200
+#     else:
+#         logger.error("Missing parameters in payment success callback")
+#         return "Missing parameters", 400
+
+# # Razorpay webhook (for production)
+# @webhook_bp.route("/razorpay-webhook-kanuka", methods=["POST"])
+# def razorpay_webhook():
+#     """Handle Razorpay payment webhook"""
+#     logger.info("Razorpay webhook received.")
+#     data = request.get_json()
+    
+#     if data.get("event") == "payment_link.paid":
+#         payment_data = data.get("payload", {}).get("payment_link", {}).get("entity", {})
+#         whatsapp_number = payment_data.get("customer", {}).get("contact")
+#         order_id = payment_data.get("reference_id")
+        
+#         if whatsapp_number and order_id:
+#             send_text_message(whatsapp_number, "✅ Your payment is confirmed! Your order is being processed.")
+#             # Confirm the order
+#             confirm_order(whatsapp_number, order_id, "Pay Now")
+    
+#     return "OK", 200
+
+
+
+
+
+
+
+# Payment success webhook
 @webhook_bp.route("/payment-success", methods=["GET"])
 def payment_success():
-    """Handle payment success callback"""
+    """Handle payment success callback with proper validation"""
     logger.info("Payment success callback received.")
+    
+    # Get parameters
     whatsapp_number = request.args.get("whatsapp")
     order_id = request.args.get("order_id")
     
     if whatsapp_number and order_id:
-        # Confirm the order with payment method
-        confirm_order(whatsapp_number, order_id, "Pay Now")
-        return "Payment confirmed", 200
+        # Format phone number consistently
+        phone = f"91{whatsapp_number[-10:]}"
+        
+        # Verify order exists in pending orders
+        pending_order_data = redis_state.redis.get(f"pending_order:{order_id}")
+        
+        if pending_order_data:
+            # Confirm the order (this will send all notifications)
+            success = confirm_order(phone, order_id, "Pay Now")
+            
+            if success:
+                logger.info(f"Order {order_id} confirmed for {phone}")
+                return "Payment confirmed", 200
+            else:
+                logger.error(f"Failed to confirm order {order_id}")
+                return "Error processing order", 500
+        else:
+            logger.warning(f"Payment success for unknown order {order_id}")
+            return "Order not found", 404
     else:
         logger.error("Missing parameters in payment success callback")
         return "Missing parameters", 400
 
 # Razorpay webhook (for production)
-@webhook_bp.route("/razorpay-webhook", methods=["POST"])
+@webhook_bp.route("/razorpay-webhook-kanuka", methods=["POST"])
 def razorpay_webhook():
-    """Handle Razorpay payment webhook"""
+    """Handle Razorpay payment webhook with proper validation"""
     logger.info("Razorpay webhook received.")
-    data = request.get_json()
     
-    if data.get("event") == "payment_link.paid":
-        payment_data = data.get("payload", {}).get("payment_link", {}).get("entity", {})
-        whatsapp_number = payment_data.get("customer", {}).get("contact")
-        order_id = payment_data.get("reference_id")
+    try:
+        data = request.get_json()
         
-        if whatsapp_number and order_id:
-            send_text_message(whatsapp_number, "✅ Your payment is confirmed! Your order is being processed.")
-            # Confirm the order
-            confirm_order(whatsapp_number, order_id, "Pay Now")
-    
-    return "OK", 200
+        if not data:
+            logger.error("No JSON data in request")
+            return "Invalid request", 400
+            
+        logger.debug(f"Razorpay webhook data: {json.dumps(data)}")
+        
+        if data.get("event") == "payment_link.paid":
+            payment_data = data.get("payload", {}).get("payment_link", {}).get("entity", {})
+            whatsapp_number = payment_data.get("customer", {}).get("contact")
+            order_id = payment_data.get("reference_id")
+            
+            if whatsapp_number and order_id:
+                # Format phone number consistently
+                phone = f"91{whatsapp_number[-10:]}"
+                
+                # Verify order exists in pending orders
+                pending_order_data = redis_state.redis.get(f"pending_order:{order_id}")
+                
+                if pending_order_data:
+                    # Send payment confirmation message first
+                    send_text_message(phone, "✅ Your payment is confirmed! Your order is being processed.")
+                    
+                    # Confirm the order (this will send the full order confirmation)
+                    success = confirm_order(phone, order_id, "Pay Now")
+                    
+                    if success:
+                        logger.info(f"Order {order_id} confirmed via Razorpay webhook for {phone}")
+                        return "OK", 200
+                    else:
+                        logger.error(f"Failed to confirm order {order_id}")
+                        return "Error processing order", 500
+                else:
+                    logger.warning(f"Razorpay payment for unknown order {order_id}")
+                    return "Order not found", 404
+        
+        # For other events we don't handle, return OK but log
+        event = data.get("event", "unknown")
+        logger.info(f"Unhandled Razorpay event: {event}")
+        return "OK", 200
+        
+    except Exception as e:
+        logger.exception("Error processing Razorpay webhook")
+        return "Server error", 500

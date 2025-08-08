@@ -209,15 +209,194 @@ def send_final_order_confirmation(to, order_id, address):
 
 
 
-def place_order(user_id, delivery_type):
-    """Place an order from user's cart"""
-    logger.info(f"Placing order for user {user_id} with delivery type {delivery_type}")
+# def place_order(user_id, delivery_type):
+#     """Place an order from user's cart"""
+#     logger.info(f"Placing order for user {user_id} with delivery type {delivery_type}")
+    
+#     # Get cart
+#     cart = redis_state.get_cart(user_id)
+#     if not cart["items"]:
+#         logger.warning(f"Cart is empty for user {user_id}")
+#         return None, "Your cart is empty. Please add items before placing an order."
+    
+#     # Generate order ID
+#     order_id = generate_order_id()
+    
+#     # Get branch information
+#     if delivery_type == "Delivery":
+#         # For delivery, we need location and nearest branch
+#         if "location" not in cart:
+#             logger.warning(f"Location not set for delivery order by {user_id}")
+#             return None, "Location not set. Please share your location first."
+        
+#         location = cart["location"]
+#         within_radius, nearest_branch, distance = is_within_delivery_radius(
+#             location["latitude"], location["longitude"]
+#         )
+        
+#         if not within_radius:
+#             logger.warning(f"User {user_id} is outside delivery radius (distance: {distance}km)")
+#             return None, f"Sorry, we don't deliver to your location. Nearest branch is {distance:.2f}km away."
+        
+#         branch = nearest_branch
+#         delivery_address = location  # Use the location dict directly
+#     else:
+#         # For takeaway, branch is required
+#         if "branch" not in cart:
+#             logger.warning(f"Branch not set for takeaway order by {user_id}")
+#             return None, "Branch not selected. Please select a branch first."
+        
+#         branch = cart["branch"]
+#         delivery_address = "Takeaway"  # Clear indicator for pickup
+    
+#     # Get payment method and delivery address
+#     payment_method = cart.get("payment_method", "Cash on Delivery")
+#     text_address = cart.get("delivery_address", "Address not provided")
+    
+#     # Prepare order data
+#     order_data = {
+#         "order_id": order_id,
+#         "user_id": user_id,
+#         "branch": branch,
+#         "items": cart["items"],
+#         "total": cart["total"],
+#         "status": ORDER_STATUS["PENDING"],
+#         "order_date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+#         "delivery_type": delivery_type,
+#         "delivery_address": delivery_address,
+#         "text_address": text_address,
+#         "payment_method": payment_method
+#     }
+    
+#     # Save to Redis
+#     if not redis_state.create_order(order_data):
+#         logger.error(f"Failed to save order {order_id} to Redis")
+#         return None, "Failed to save order. Please try again."
+    
+#     # Log order to CSV
+#     log_order(order_data)
+    
+#     # Schedule cart reminder (won't apply since cart is cleared, but good for reference)
+#     redis_state.schedule_cart_reminder(user_id, order_id)
+    
+#     # Send order alert to branch
+#     send_order_alert(
+#         branch,
+#         order_id,
+#         cart["items"],
+#         cart["total"],
+#         user_id,
+#         delivery_address,
+#         delivery_type
+#     )
+    
+#     return order_id, f"Order #{order_id} placed successfully!"
+
+
+# def confirm_order(whatsapp_number, order_id, payment_method, address=None):
+#     """Confirm order after payment or for cash on delivery"""
+#     logger.info(f"Confirming order {order_id} for {whatsapp_number}")
+    
+#     # First check if it's a pending order
+#     pending_order_data = redis_state.redis.get(f"pending_order:{order_id}")
+#     is_pending = False
+    
+#     if pending_order_data:
+#         is_pending = True
+#         # Decode if pending_order_data is bytes
+#         if isinstance(pending_order_data, bytes):
+#             pending_order_data = pending_order_data.decode('utf-8')
+        
+#         try:
+#             pending_order = json.loads(pending_order_data)
+#             # Extract cart and other details
+#             cart = pending_order["cart"]
+#             delivery_type = pending_order["delivery_type"]
+#             address = pending_order["delivery_address"]
+            
+#             # Place the actual order
+#             order_id, message = place_order(whatsapp_number, delivery_type)
+            
+#             if not order_id:
+#                 logger.error(f"Failed to place order from pending order: {message}")
+#                 return False
+                
+#         except Exception as e:
+#             logger.error(f"Error processing pending order: {str(e)}")
+#             return False
+    
+#     # For Cash on Delivery or already placed orders
+#     order = redis_state.get_order(order_id)
+#     if not order:
+#         logger.error(f"Order {order_id} not found")
+#         return False
+    
+#     # Update order status (only needed for pending orders that were just placed)
+#     if is_pending:
+#         order["status"] = ORDER_STATUS["PAID"]
+#         order["payment_status"] = "PAID"
+#         order["payment_method"] = "Pay Now"
+#         order["updated_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        
+#         # Update in Redis
+#         redis_state.update_order_status(order_id, order["status"])
+        
+#         # Delete pending order
+#         redis_state.redis.delete(f"pending_order:{order_id}")
+    
+#     # Send order alert to branch
+#     send_order_alert(
+#         order["branch"],
+#         order_id,
+#         order["items"],
+#         order["total"],
+#         whatsapp_number,
+#         order["delivery_address"],
+#         order["delivery_type"]
+#     )
+    
+#     # Send order confirmation
+#     message = f"✅ *ORDER CONFIRMED*\n\n" \
+#              f"Order ID: #{order_id}\n" \
+#              f"Branch: {order['branch']}\n" \
+#              f"Payment Method: Pay Now\n\n"
+    
+#     if order["delivery_type"] == "Delivery" and order["delivery_address"] != "Takeaway":
+#         message += "DELIVERY ADDRESS:\n" \
+#                   f"{order['delivery_address']}\n\n"
+    
+#     message += "ORDER ITEMS:\n"
+#     for item in order["items"]:
+#         item_total = item["quantity"] * item["price"]
+#         message += f"• {item['name']} x{item['quantity']} = ₹{item_total}\n"
+    
+#     message += f"\n*TOTAL*: ₹{order['total']}\n\n" \
+#              "Thank you for your payment! Your order is being processed."
+    
+#     send_text_message(whatsapp_number, message)
+    
+#     logger.info(f"Order {order_id} confirmed with payment method {payment_method}")
+#     return True
+
+
+
+
+
+
+
+
+
+
+
+def place_order(user_id, delivery_type, address=None, payment_method="Cash on Delivery"):
+    """Place an order from user's cart - handles everything for COD orders"""
+    logger.info(f"Placing order for user {user_id} with delivery type {delivery_type} and payment method {payment_method}")
     
     # Get cart
     cart = redis_state.get_cart(user_id)
     if not cart["items"]:
         logger.warning(f"Cart is empty for user {user_id}")
-        return None, "Your cart is empty. Please add items before placing an order."
+        return False, "Your cart is empty. Please add items before placing an order."
     
     # Generate order ID
     order_id = generate_order_id()
@@ -227,7 +406,7 @@ def place_order(user_id, delivery_type):
         # For delivery, we need location and nearest branch
         if "location" not in cart:
             logger.warning(f"Location not set for delivery order by {user_id}")
-            return None, "Location not set. Please share your location first."
+            return False, "Location not set. Please share your location first."
         
         location = cart["location"]
         within_radius, nearest_branch, distance = is_within_delivery_radius(
@@ -236,7 +415,7 @@ def place_order(user_id, delivery_type):
         
         if not within_radius:
             logger.warning(f"User {user_id} is outside delivery radius (distance: {distance}km)")
-            return None, f"Sorry, we don't deliver to your location. Nearest branch is {distance:.2f}km away."
+            return False, f"Sorry, we don't deliver to your location. Nearest branch is {distance:.2f}km away."
         
         branch = nearest_branch
         delivery_address = location  # Use the location dict directly
@@ -244,14 +423,10 @@ def place_order(user_id, delivery_type):
         # For takeaway, branch is required
         if "branch" not in cart:
             logger.warning(f"Branch not set for takeaway order by {user_id}")
-            return None, "Branch not selected. Please select a branch first."
+            return False, "Branch not selected. Please select a branch first."
         
         branch = cart["branch"]
         delivery_address = "Takeaway"  # Clear indicator for pickup
-    
-    # Get payment method and delivery address
-    payment_method = cart.get("payment_method", "Cash on Delivery")
-    text_address = cart.get("delivery_address", "Address not provided")
     
     # Prepare order data
     order_data = {
@@ -260,18 +435,18 @@ def place_order(user_id, delivery_type):
         "branch": branch,
         "items": cart["items"],
         "total": cart["total"],
-        "status": ORDER_STATUS["PENDING"],
+        "status": ORDER_STATUS["PAID"] if payment_method == "Cash on Delivery" else ORDER_STATUS["PENDING"],
         "order_date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "delivery_type": delivery_type,
         "delivery_address": delivery_address,
-        "text_address": text_address,
+        "text_address": address,
         "payment_method": payment_method
     }
     
     # Save to Redis
     if not redis_state.create_order(order_data):
         logger.error(f"Failed to save order {order_id} to Redis")
-        return None, "Failed to save order. Please try again."
+        return False, "Failed to save order. Please try again."
     
     # Log order to CSV
     log_order(order_data)
@@ -290,90 +465,44 @@ def place_order(user_id, delivery_type):
         delivery_type
     )
     
-    return order_id, f"Order #{order_id} placed successfully!"
+    # Send order confirmation to customer
+    send_final_order_confirmation(user_id, order_id, address)
+    
+    return True, f"Order #{order_id} placed successfully!"
 
-
-def confirm_order(whatsapp_number, order_id, payment_method, address=None):
-    """Confirm order after payment or for cash on delivery"""
+def confirm_order(whatsapp_number, order_id, payment_method):
+    """Confirm order after payment - only for online payments"""
     logger.info(f"Confirming order {order_id} for {whatsapp_number}")
     
-    # First check if it's a pending order
+    # Get pending order
     pending_order_data = redis_state.redis.get(f"pending_order:{order_id}")
-    is_pending = False
-    
-    if pending_order_data:
-        is_pending = True
-        # Decode if pending_order_data is bytes
-        if isinstance(pending_order_data, bytes):
-            pending_order_data = pending_order_data.decode('utf-8')
-        
-        try:
-            pending_order = json.loads(pending_order_data)
-            # Extract cart and other details
-            cart = pending_order["cart"]
-            delivery_type = pending_order["delivery_type"]
-            address = pending_order["delivery_address"]
-            
-            # Place the actual order
-            order_id, message = place_order(whatsapp_number, delivery_type)
-            
-            if not order_id:
-                logger.error(f"Failed to place order from pending order: {message}")
-                return False
-                
-        except Exception as e:
-            logger.error(f"Error processing pending order: {str(e)}")
-            return False
-    
-    # For Cash on Delivery or already placed orders
-    order = redis_state.get_order(order_id)
-    if not order:
-        logger.error(f"Order {order_id} not found")
+    if not pending_order_data:
+        logger.error(f"Pending order {order_id} not found")
         return False
     
-    # Update order status (only needed for pending orders that were just placed)
-    if is_pending:
-        order["status"] = ORDER_STATUS["PAID"]
-        order["payment_status"] = "PAID"
-        order["payment_method"] = "Pay Now"
-        order["updated_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    # Decode if pending_order_data is bytes
+    if isinstance(pending_order_data, bytes):
+        pending_order_data = pending_order_data.decode('utf-8')
+    
+    try:
+        pending_order = json.loads(pending_order_data)
         
-        # Update in Redis
-        redis_state.update_order_status(order_id, order["status"])
+        # Extract details
+        user_id = pending_order["user_id"]
+        cart = pending_order["cart"]
+        delivery_type = pending_order["delivery_type"]
+        address = pending_order["delivery_address"]
         
-        # Delete pending order
-        redis_state.redis.delete(f"pending_order:{order_id}")
-    
-    # Send order alert to branch
-    send_order_alert(
-        order["branch"],
-        order_id,
-        order["items"],
-        order["total"],
-        whatsapp_number,
-        order["delivery_address"],
-        order["delivery_type"]
-    )
-    
-    # Send order confirmation
-    message = f"✅ *ORDER CONFIRMED*\n\n" \
-             f"Order ID: #{order_id}\n" \
-             f"Branch: {order['branch']}\n" \
-             f"Payment Method: Pay Now\n\n"
-    
-    if order["delivery_type"] == "Delivery" and order["delivery_address"] != "Takeaway":
-        message += "DELIVERY ADDRESS:\n" \
-                  f"{order['delivery_address']}\n\n"
-    
-    message += "ORDER ITEMS:\n"
-    for item in order["items"]:
-        item_total = item["quantity"] * item["price"]
-        message += f"• {item['name']} x{item['quantity']} = ₹{item_total}\n"
-    
-    message += f"\n*TOTAL*: ₹{order['total']}\n\n" \
-             "Thank you for your payment! Your order is being processed."
-    
-    send_text_message(whatsapp_number, message)
-    
-    logger.info(f"Order {order_id} confirmed with payment method {payment_method}")
-    return True
+        # Place the actual order (this will send all notifications)
+        success, message = place_order(user_id, delivery_type, address=address, payment_method="Pay Now")
+        
+        if success:
+            # Delete pending order
+            redis_state.redis.delete(f"pending_order:{order_id}")
+            return True
+        else:
+            logger.error(f"Failed to place order from pending order: {message}")
+            return False
+    except Exception as e:
+        logger.error(f"Error processing pending order: {str(e)}")
+        return False

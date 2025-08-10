@@ -309,7 +309,7 @@ def razorpay_webhook():
         order_id = payment_data.get("reference_id")
         
         if whatsapp_number and order_id:
-            send_text_message(whatsapp_number, "✅ Your payment is confirmed! Your order is being processed.")
+            # send_text_message(whatsapp_number, "✅ Your payment is confirmed! Your order is being processed.")
             # Confirm the order with correct payment method string
             confirm_order(whatsapp_number, order_id, "Pay Now")
     

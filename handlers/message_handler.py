@@ -148,6 +148,7 @@ def handle_button_response(sender, button_id, current_state):
         redis_state.set_user_state(sender, {"step": "VIEWING_CATALOG"})
     
     elif button_id == "PROCEED_TO_CHECKOUT":
+        send_discount(sender)
         send_location_request(sender)
         redis_state.set_delivery_type(sender, "Delivery")
         redis_state.set_user_state(sender, {"step": "WAITING_FOR_LOCATION"})
@@ -197,7 +198,7 @@ def handle_location(sender, latitude, longitude, current_state):
     if within_radius:
         # Set branch in cart
         redis_state.set_branch(sender, nearest_branch)
-        send_discount(sender)
+        # send_discount(sender)
         # Ask for payment method
         send_payment_options(sender)
         redis_state.set_user_state(sender, {"step": "SELECTING_PAYMENT_METHOD", "branch": nearest_branch})
@@ -226,7 +227,7 @@ def handle_location_by_text(sender, text):
         redis_state.set_branch(sender, nearest_branch)
         
         # Ask for payment method
-        send_discount(sender)
+        # send_discount(sender)
         send_payment_options(sender)
         redis_state.set_user_state(sender, {"step": "SELECTING_PAYMENT_METHOD", "branch": nearest_branch})
     else:

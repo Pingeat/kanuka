@@ -148,10 +148,10 @@ def handle_button_response(sender, button_id, current_state):
         redis_state.set_user_state(sender, {"step": "VIEWING_CATALOG"})
     
     elif button_id == "PROCEED_TO_CHECKOUT":
-        send_delivery_options(sender)
         send_location_request(sender)
         redis_state.set_delivery_type(sender, "Delivery")
         redis_state.set_user_state(sender, {"step": "WAITING_FOR_LOCATION"})
+        # send_delivery_options(sender)
         # redis_state.set_user_state(sender, {"step": "SELECTING_DELIVERY_TYPE"})  ## as of now we are only supporting delivery need not require to send delivery type selection
     
     elif button_id == "CLEAR_CART":
@@ -390,7 +390,7 @@ def handle_text_message(sender, text, current_state):
     # Handle delivery type selection
     elif current_state.get("step") == "WAITING_FOR_LOCATION":
         # This is handled by delivery buttons
-        handle_location_by_text(sender)
+        handle_location_by_text(sender,text)
 
 
 def handle_catalog_selection(sender, product_retailer_id, current_state):

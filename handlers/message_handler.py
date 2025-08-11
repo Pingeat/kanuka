@@ -346,16 +346,7 @@ def handle_text_message(sender, text, current_state):
                 # Reset state
                 redis_state.clear_user_state(sender)
         
-        return
-    
-    # Reset to main menu if state is invalid or missing
-    if not current_state or current_state.get("step") not in ["VIEWING_CATALOG", "VIEWING_CART", "SELECTING_DELIVERY_TYPE", "WAITING_FOR_LOCATION", "SELECTING_BRANCH", "SELECTING_PAYMENT_METHOD", "WAITING_FOR_ADDRESS"]:
-        logger.info(f"Resetting state for {sender} - invalid or missing state: {current_state}")
-        redis_state.clear_user_state(sender)
-        send_main_menu(sender)
-        redis_state.set_user_state(sender, {"step": "MAIN_MENU"})
-        return
-    
+        return 
     # Handle common greetings in any state
     greetings = ["hi", "hello", "hey", "hii", "namaste"]
     if any(greeting in text for greeting in greetings):
@@ -375,7 +366,11 @@ def handle_text_message(sender, text, current_state):
     if current_state.get("step") == "MAIN_MENU":
         # Already handled by buttons, but just in case
         send_main_menu(sender)
-    
+    # Handle delivery type selection
+    elif current_state.get("step") == "WAITING_FOR_LOCATION":
+        # This is handled by delivery buttons
+        
+        handle_location_by_text(sender,text)
     # Handle catalog interaction
     elif current_state.get("step") == "VIEWING_CATALOG":
         # This is handled by catalog selection, not text
@@ -390,10 +385,14 @@ def handle_text_message(sender, text, current_state):
     elif current_state.get("step") == "SELECTING_DELIVERY_TYPE":
         # This is handled by delivery buttons
         send_delivery_options(sender)
-    # Handle delivery type selection
-    elif current_state.get("step") == "WAITING_FOR_LOCATION":
-        # This is handled by delivery buttons
-        handle_location_by_text(sender,text)
+    # Reset to main menu if state is invalid or missing
+    if not current_state or current_state.get("step") not in ["VIEWING_CATALOG", "VIEWING_CART", "SELECTING_DELIVERY_TYPE", "WAITING_FOR_LOCATION", "SELECTING_BRANCH", "SELECTING_PAYMENT_METHOD", "WAITING_FOR_ADDRESS"]:
+        logger.info(f"Resetting state for {sender} - invalid or missing state: {current_state}")
+        redis_state.clear_user_state(sender)
+        send_main_menu(sender)
+        redis_state.set_user_state(sender, {"step": "MAIN_MENU"})
+        return
+    
 
 
 def handle_catalog_selection(sender, product_retailer_id, current_state):

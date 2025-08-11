@@ -466,11 +466,7 @@ def send_payment_link(to, order_id, amount):
     # In a real implementation, this would generate a Razorpay payment link
     payment_link = generate_payment_link(to, amount, order_id)
     
-    # Extract only the token part from Razorpay link
-    if payment_link.startswith("https://rzp.io/rzp/  "):
-        token = payment_link.split("/")[-1]
-    else:
-        token = payment_link  # fallback in case it's already trimmed
+
 
     headers = {
         "Authorization": f"Bearer {META_ACCESS_TOKEN}",
@@ -489,7 +485,7 @@ def send_payment_link(to, order_id, amount):
                     "sub_type": "url",
                     "index": 0,
                     "parameters": [
-                        { "type": "text", "text": token }  # send only the token
+                        { "type": "text", "text": payment_link }  # send only the token
                     ]
                 }
             ]

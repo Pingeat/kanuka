@@ -208,10 +208,10 @@ def send_final_order_confirmation(to, order_id, address,branch_number,discount_p
     
     message += "ORDER ITEMS:\n"
     for item in order["items"]:
-        print(item)
         item_total = item["quantity"] * item["price"]
         if discount_percentage > 0:
-            message += f"• {item['name']} x{item['quantity']} | {discount_percentage}% Discount Applied: -₹{discount_amount} = ₹{item_total}\n"
+            disc_total = discount_amount - item_total
+            message += f"• {item['name']} x{item['quantity']} | {discount_percentage}% Discount Applied: -₹{discount_amount} = ₹{disc_total}\n"
         else:
             message += f"• {item['name']} x{item['quantity']} = ₹{item_total}\n"
     

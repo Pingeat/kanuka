@@ -3,6 +3,9 @@ from datetime import datetime
 import json
 import traceback
 import uuid
+
+import googlemaps
+from config.credentials import GOOGLE_MAPS_API_KEY
 from config.settings import BRANCH_COORDINATES, DELIVERY_RADIUS_KM, GREETING_MESSAGE, ORDER_STATUS, PRODUCT_CATALOG
 from stateHandlers.redis_state import redis_state
 from services.whatsapp_service import (
@@ -146,7 +149,10 @@ def handle_button_response(sender, button_id, current_state):
     
     elif button_id == "PROCEED_TO_CHECKOUT":
         send_delivery_options(sender)
-        redis_state.set_user_state(sender, {"step": "SELECTING_DELIVERY_TYPE"})
+        send_location_request(sender)
+        redis_state.set_delivery_type(sender, "Delivery")
+        redis_state.set_user_state(sender, {"step": "WAITING_FOR_LOCATION"})
+        # redis_state.set_user_state(sender, {"step": "SELECTING_DELIVERY_TYPE"})  ## as of now we are only supporting delivery need not require to send delivery type selection
     
     elif button_id == "CLEAR_CART":
         redis_state.clear_cart(sender)
@@ -191,7 +197,7 @@ def handle_location(sender, latitude, longitude, current_state):
     if within_radius:
         # Set branch in cart
         redis_state.set_branch(sender, nearest_branch)
-        
+        send_discount(sender)
         # Ask for payment method
         send_payment_options(sender)
         redis_state.set_user_state(sender, {"step": "SELECTING_PAYMENT_METHOD", "branch": nearest_branch})
@@ -200,16 +206,89 @@ def handle_location(sender, latitude, longitude, current_state):
                  f"The nearest branch is {distance:.2f}km away, but our delivery radius is only {DELIVERY_RADIUS_KM}km."
         send_text_message(sender, message)
 
+def handle_location_by_text(sender, text):
+    gmaps = googlemaps.Client(GOOGLE_MAPS_API_KEY)
+    geocode = gmaps.geocode(text)
+    if geocode:
+        location = geocode[0]["geometry"]["location"]
+        latitude = location["lat"]
+        longitude = location["lng"]
+    logger.info(f"Handling location for {sender}: {latitude}, {longitude}")
+    
+    # Set location in cart
+    redis_state.set_location(sender, latitude, longitude)
+    
+    # Check if within delivery radius
+    within_radius, nearest_branch, distance = is_within_delivery_radius(latitude, longitude)
+    
+    if within_radius:
+        # Set branch in cart
+        redis_state.set_branch(sender, nearest_branch)
+        
+        # Ask for payment method
+        send_discount(sender)
+        send_payment_options(sender)
+        redis_state.set_user_state(sender, {"step": "SELECTING_PAYMENT_METHOD", "branch": nearest_branch})
+    else:
+        message = f"❌ Sorry, we don't deliver to your location.\n" \
+                 f"The nearest branch is {distance:.2f}km away, but our delivery radius is only {DELIVERY_RADIUS_KM}km."
+        send_text_message(sender, message)
+
+def send_discount(sender):
+     # Get global discount
+    discount_percentage = redis_state.get_global_discount()
+    logger.info(f"Applying global discount of {discount_percentage}% to order for {sender}")
+    if discount_percentage > 0:
+        send_text_message(sender, f"🎉 Congratulations! You've unlocked a {discount_percentage}% discount.")
+
 def handle_text_message(sender, text, current_state):
     """Handle text messages from users"""
     logger.info(f"Handling text message from {sender}: {text}")
+     # Handle admin discount commands
+    if is_admin(sender):
+        # Set discount command (e.g., "set discount 10")
+        discount_match = re.search(r'set\s+discount\s+(\d+\.?\d*)', text, re.IGNORECASE)
+        if discount_match:
+            discount_percentage = float(discount_match.group(1))
+            if 0 <= discount_percentage <= 100:
+                success = redis_state.set_global_discount(discount_percentage)
+                if success:
+                    message = f"✅ Global discount set to {discount_percentage}%"
+                    send_text_message(sender, message)
+                    logger.info(f"Admin {sender} set global discount to {discount_percentage}%")
+                else:
+                    send_text_message(sender, "❌ Failed to set discount. Please try again.")
+            else:
+                send_text_message(sender, "❌ Discount percentage must be between 0 and 100")
+            return
+        
+        # Clear discount command
+        if text.lower() in ["clear discount", "remove discount", "discount off"]:
+            success = redis_state.clear_global_discount()
+            if success:
+                send_text_message(sender, "✅ Global discount has been cleared")
+                logger.info(f"Admin {sender} cleared global discount")
+            else:
+                send_text_message(sender, "❌ Failed to clear discount. Please try again.")
+            return
+        
+        # Check current discount
+        if text.lower() in ["get discount", "discount", "current discount"]:
+            discount_percentage = redis_state.get_global_discount()
+            send_text_message(sender, f"📊 Current global discount: {discount_percentage}%")
+            return
     
     # Handle order status update commands from staff
-    status_update_match = re.search(r'(ready|ontheway|on the way|delivered)\s+ord-[a-z0-9]+', text, re.IGNORECASE)
+    status_update_match = re.search(r'(ready|ontheway|on the way|delivered)\s+[a-z]{3}\d{8}[a-z0-9]{4}', text, re.IGNORECASE)
     if status_update_match:
         success, message = update_order_status_from_command(text)
         send_text_message(sender, message)
         return
+    
+    if text.lower() == "commands" or text.lower() == "/commands":
+        send_staff_command_help(sender)
+        return
+
     # Handle address input
     if current_state and current_state.get("step") == "WAITING_FOR_ADDRESS":
         payment_method = current_state.get("payment_method", "Cash on Delivery")
@@ -308,6 +387,10 @@ def handle_text_message(sender, text, current_state):
     elif current_state.get("step") == "SELECTING_DELIVERY_TYPE":
         # This is handled by delivery buttons
         send_delivery_options(sender)
+    # Handle delivery type selection
+    elif current_state.get("step") == "WAITING_FOR_LOCATION":
+        # This is handled by delivery buttons
+        handle_location_by_text(sender)
 
 
 def handle_catalog_selection(sender, product_retailer_id, current_state):
@@ -399,3 +482,20 @@ def calculate_distance(lat1, lon1, lat2, lon2):
 def generate_order_id():
     """Generate a unique order ID"""
     return f"ORD{get_current_ist().strftime('%Y%m%d')}{str(uuid.uuid4())[:4].upper()}"
+
+def is_admin(phone):
+    """Check if user is an admin"""
+    from config.settings import ADMIN_NUMBERS
+    return phone in ADMIN_NUMBERS
+
+def send_staff_command_help(sender):
+    """Send help message for staff commands"""
+    message = "🛠️ *STAFF COMMANDS*\n\n"
+    message += "To update order status, use:\n"
+    message += "• *ready [order_id]* - Mark order as ready\n"
+    message += "• *on the way [order_id]* - Mark order as out for delivery\n"
+    message += "• *delivered [order_id]* - Mark order as delivered\n\n"
+    message += "Example: *ready FCT20250808E8BF*\n\n"
+    message += "Order ID format: 3 letters + 8 digits + 4 alphanumeric characters"
+    
+    send_text_message(sender, message)

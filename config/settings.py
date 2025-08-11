@@ -103,6 +103,8 @@ BULK_ORDER_CONTACT = {
     "email": "bulk@kanukaorganics.com"
 }
 
+
+ADMIN_NUMBERS = ["8074301029","9640112005"]
 # Current active brand (can be changed dynamically)
 # ACTIVE_BRAND = "default"
 

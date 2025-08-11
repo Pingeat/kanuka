@@ -45,6 +45,8 @@ REDIS_URL = "redis://localhost:6379/0"
 RAZORPAY_KEY_ID = "rzp_live_jtGMQ5k5QGHxFg"
 RAZORPAY_KEY_SECRET = "FEMHAO4zeUFnAiKZPLe44NRN"
 
+GOOGLE_MAPS_API_KEY = "AIzaSyCuUz9N78WZAT1N38ffIDkbySI3_0zkZgE"
+
 # CSV file paths (relative to project root)
 ORDERS_CSV = "../data/orders.csv"
 CART_REMINDERS_CSV = "../data/cart_reminders.csv"

@@ -280,7 +280,7 @@ def handle_text_message(sender, text, current_state):
             discount_percentage = redis_state.get_global_discount()
             send_text_message(sender, f"📊 Current global discount: {discount_percentage}%")
             return
-    
+    print(current_state.get("step"))
     # Handle order status update commands from staff
     status_update_match = re.search(r'(ready|ontheway|on the way|delivered)\s+[a-z]{3}\d{8}[a-z0-9]{4}', text, re.IGNORECASE)
     if status_update_match:

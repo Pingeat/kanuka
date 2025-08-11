@@ -201,8 +201,8 @@ def send_final_order_confirmation(to, order_id, address,branch_number,discount_p
             message += f"• {item['name']} x{item['quantity']} = ₹{item_total}\n"
     
     message += f"\n*TOTAL*: ₹{order['total']}\n\n" \
-             "Your order will be processed shortly. Thank you for shopping!\n"\
-             "📞for any queries contact our branch {branch_number} "
+             "Your order will be processed shortly. Thank you for shopping!\n"
+    message += f"📞for any queries contact our branch {branch_number} "
     
     return send_text_message(to, message)
 
@@ -302,7 +302,7 @@ def place_order(user_id, delivery_type, address=None, payment_method="Cash on De
     )
     
     # Send order confirmation to customer
-    send_final_order_confirmation(user_id, order_id, address,BRANCH_CONTACTS[branch][0],discount_amount)
+    send_final_order_confirmation(user_id, order_id, address,BRANCH_CONTACTS[branch][0],discount_percentage,discount_amount)
     
     return True, f"Order #{order_id} placed successfully!"
 

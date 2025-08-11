@@ -77,12 +77,13 @@ ORDER_STATUS = {
 }
 
 # Order status progression
-STATUS_PROGRESSION = {
-    "Pending": ["Paid", "Cancelled"],
-    "Paid": ["Ready"],
-    "Ready": ["On The Way"],
-    "On The Way": ["Delivered"],
-    "Delivered": []
+ORDER_STATUS = {
+    "PENDING": "Pending",
+    "PAID": "Paid",
+    "READY": "Ready",
+    "ON_THE_WAY": "On The Way",
+    "DELIVERED": "Delivered",
+    "CANCELLED": "Cancelled"
 }
 
 # Payment methods
@@ -105,6 +106,7 @@ BULK_ORDER_CONTACT = {
 
 
 ADMIN_NUMBERS = ["8074301029","9640112005"]
+
 # Current active brand (can be changed dynamically)
 # ACTIVE_BRAND = "default"
 

@@ -44,7 +44,7 @@ BRANCH_CONTACTS = {
     "Nizampet": ["916303241076"],
     "Nanakramguda": ["916303237242"],
     "Madhapur": ["919640112005"],
-    "West Maredpally": ["9032366276"]
+    "West Maredpally": ["919032366276"]
 }
 
 OTHER_NUMBERS = ["9640112005", "9226454238","8074301029"]

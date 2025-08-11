@@ -60,7 +60,7 @@ BRANCH_COORDINATES = {
 }
 
 # Delivery radius in kilometers
-DELIVERY_RADIUS_KM = 4.0
+DELIVERY_RADIUS_KM = 6.0
 
 # Cart reminder settings
 CART_REMINDER_INTERVAL_HOURS = 2

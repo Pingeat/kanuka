@@ -70,6 +70,9 @@ def process_payment(user_id, order_id):
     import time
     time.sleep(1)  # Simulate API delay
     
+     # Get cart
+    cart = redis_state.get_cart(user_id)
+    
      # Get global discount
     discount_percentage = redis_state.get_global_discount()
     
@@ -83,9 +86,6 @@ def process_payment(user_id, order_id):
     if discount_percentage > 0:
         discount_amount = (original_total * discount_percentage) / 100
         discounted_total = original_total - discount_amount
-    
-    # Get cart
-    cart = redis_state.get_cart(user_id)
     
     # Send payment link
     send_payment_link(user_id, order_id,discounted_total)

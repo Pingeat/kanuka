@@ -459,6 +459,68 @@ def send_payment_link(to, order_id, amount):
     return send_text_message(to, message)
 
 
+def send_payment_link(to, order_id, amount):
+    """Send payment link for online payment using WhatsApp template"""
+    logger.info(f"Sending payment link to {to} for order {order_id}")
+    
+    # In a real implementation, this would generate a Razorpay payment link
+    payment_link = generate_payment_link(to, amount, order_id)
+    
+    # Extract only the token part from Razorpay link
+    if payment_link.startswith("https://rzp.io/rzp/  "):
+        token = payment_link.split("/")[-1]
+    else:
+        token = payment_link  # fallback in case it's already trimmed
+
+    headers = {
+        "Authorization": f"Bearer {META_ACCESS_TOKEN}",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "messaging_product": "whatsapp",
+        "to": to,
+        "type": "template",
+        "template": {
+            "name": "pays_online",  # your correct template name
+            "language": { "code": "en_US" },
+            "components": [
+                {
+                    "type": "button",
+                    "sub_type": "url",
+                    "index": 0,
+                    "parameters": [
+                        { "type": "text", "text": token }  # send only the token
+                    ]
+                }
+            ]
+        }
+    }
+
+    # Use the same API URL as in send_text_message
+    try:
+        response = requests.post(WHATSAPP_API_URL, headers=headers, json=payload)
+        logger.info(f"Payment link template sent to {to} for order {order_id}. Status: {response.status_code}")
+        if response.status_code != 200:
+            logger.error(f"Payment link template error: {response.text}")
+            # Fallback to text message if template fails
+            message = "💳 *SECURE PAYMENT*\n\n" \
+                     f"Please complete payment for your order #{order_id}:\n\n" \
+                     f"Amount: ₹{amount}\n\n" \
+                     f"Payment Link: {payment_link}\n\n" \
+                     "You will receive order confirmation after payment is successful."
+            return send_text_message(to, message)
+        return response
+    except Exception as e:
+        logger.error(f"Failed to send payment link template: {str(e)}")
+        # Fallback to text message if template fails
+        message = "💳 *SECURE PAYMENT*\n\n" \
+                 f"Please complete payment for your order #{order_id}:\n\n" \
+                 f"Amount: ₹{amount}\n\n" \
+                 f"Payment Link: {payment_link}\n\n" \
+                 "You will receive order confirmation after payment is successful."
+        return send_text_message(to, message)
+
+
 def send_order_status_update(to, order_id, status):
     """Send order status update to customer"""
     logger.info(f"Sending order status update to {to} for order {order_id}")
@@ -631,7 +693,7 @@ def send_final_order_confirmation(to, order_id, address):
 
 
 
-def send_order_alert(branch, order_id, items, total, sender, payment_mode, delivery_type):
+def send_order_alert(branch, order_id, items, total, sender, payment_mode,discount_percentage,discount_amount, delivery_type):
     """Send order alert to branch with delivery address information"""
     logger.info(f"Sending order alert to {branch} for order {order_id}")
     
@@ -676,6 +738,8 @@ def send_order_alert(branch, order_id, items, total, sender, payment_mode, deliv
     message += "ORDER ITEMS:\n"
     for item in items:
         item_total = item["quantity"] * item["price"]
+        if discount_percentage > 0:
+            message += f"• {item['name']} x{item['quantity']} | {discount_percentage}% Discount Applied: -₹{discount_amount} = ₹{item_total}\n"
         message += f"• {item['name']} x{item['quantity']} = ₹{item_total}\n"
     
     message += f"\n*TOTAL*: ₹{total}\n\n" \

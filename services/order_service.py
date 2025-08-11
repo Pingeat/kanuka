@@ -309,9 +309,11 @@ def place_order(user_id, delivery_type, address=None, payment_method="Cash on De
         branch,
         order_id,
         cart["items"],
-        cart["total"],
+        discounted_total,
         user_id,
         payment_method,
+        discount_percentage,
+        discount_amount,
         delivery_type
     )
     

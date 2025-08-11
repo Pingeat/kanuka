@@ -497,6 +497,8 @@ def send_staff_command_help(sender):
     message += "• *on the way [order_id]* - Mark order as out for delivery\n"
     message += "• *delivered [order_id]* - Mark order as delivered\n\n"
     message += "Example: *ready FCT20250808E8BF*\n\n"
-    message += "Order ID format: 3 letters + 8 digits + 4 alphanumeric characters"
+    message += "Order ID format: 3 letters + 8 digits + 4 alphanumeric characters\n\n"
+    message += "To Apply Discount : *set discount 10*\n\n"
+    message += "To Clear Discount : *clear discount*\n\n"
     
     send_text_message(sender, message)

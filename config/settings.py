@@ -105,7 +105,7 @@ BULK_ORDER_CONTACT = {
 }
 
 
-ADMIN_NUMBERS = ["918074301029","919640112005"]
+ADMIN_NUMBERS = ["8074301029","9640112005"]
 
 # Current active brand (can be changed dynamically)
 # ACTIVE_BRAND = "default"

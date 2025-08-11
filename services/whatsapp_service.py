@@ -1,4 +1,5 @@
 # services/whatsapp_service.py
+import math
 import requests
 import json
 from config.credentials import META_ACCESS_TOKEN, WHATSAPP_API_URL, WHATSAPP_CATALOG_ID
@@ -735,9 +736,9 @@ def send_order_alert(branch, order_id, items, total, sender, payment_mode,discou
         item_total = item["quantity"] * item["price"]
         message += f"• {item['name']} x{item['quantity']} = ₹{item_total}\n"
     if discount_percentage > 0:
-        message += f"• | {discount_percentage:.2f}% Discount Applied: -₹{discount_amount}"
+        message += f"• | {math.ceil(discount_percentage)}% Discount Applied: -₹{math.ceil(discount_amount)}"
     
-    message += f"\n*TOTAL PAYABLE*: ₹{total:.2f}\n\n" \
+    message += f"\n*TOTAL PAYABLE*: ₹{math.ceil(total)}\n\n" \
              "Please prepare this order as soon as possible."
     
     # Send to all recipients

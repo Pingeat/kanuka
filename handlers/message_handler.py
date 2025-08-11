@@ -210,10 +210,12 @@ def handle_location(sender, latitude, longitude, current_state):
 def handle_location_by_text(sender, text):
     gmaps = googlemaps.Client(GOOGLE_MAPS_API_KEY)
     geocode = gmaps.geocode(text)
-    if geocode:
-        location = geocode[0]["geometry"]["location"]
-        latitude = location["lat"]
-        longitude = location["lng"]
+    if not geocode:
+        send_text_message(sender, "❌ Sorry, we couldn't find your location. We may not deliver there.")
+        return 
+    location = geocode[0]["geometry"]["location"]
+    latitude = location["lat"]
+    longitude = location["lng"]
     logger.info(f"Handling location for {sender}: {latitude}, {longitude}")
     
     # Set location in cart

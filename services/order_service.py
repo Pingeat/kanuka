@@ -211,8 +211,8 @@ def send_final_order_confirmation(to, order_id, address,branch_number,discount_p
         item_total = item["quantity"] * item["price"]
         message += f"• {item['name']} x{item['quantity']} = ₹{item_total}\n"
     if discount_percentage > 0:
-        message += f"• | {discount_percentage}% Discount Applied: -₹{discount_amount}"
-    message += f"\n*TOTAL Payable*: ₹{order['total']}\n\n" \
+        message += f"• | {discount_percentage:.2f}% Discount Applied: -₹{discount_amount}"
+    message += f"\n*TOTAL PAYABLE*: ₹{order['total']:.2f}\n\n" \
              "Your order will be processed shortly. Thank you for shopping!\n"
     message += f"📞for any queries contact our branch {branch_number} "
     

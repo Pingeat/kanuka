@@ -735,9 +735,9 @@ def send_order_alert(branch, order_id, items, total, sender, payment_mode,discou
         item_total = item["quantity"] * item["price"]
         message += f"• {item['name']} x{item['quantity']} = ₹{item_total}\n"
     if discount_percentage > 0:
-        message += f"• | {discount_percentage}% Discount Applied: -₹{discount_amount}"
+        message += f"• | {discount_percentage:.2f}% Discount Applied: -₹{discount_amount}"
     
-    message += f"\n*TOTAL Payable*: ₹{total}\n\n" \
+    message += f"\n*TOTAL PAYABLE*: ₹{total:.2f}\n\n" \
              "Please prepare this order as soon as possible."
     
     # Send to all recipients

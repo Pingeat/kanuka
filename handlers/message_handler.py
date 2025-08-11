@@ -238,9 +238,9 @@ def handle_location_by_text(sender, text):
 def send_discount(sender):
      # Get global discount
     discount_percentage = redis_state.get_global_discount()
-    logger.info(f"Applying global discount of {discount_percentage}% to order for {sender}")
+    logger.info(f"Applying global discount of {discount_percentage:.2f}% to order for {sender}")
     if discount_percentage > 0:
-        send_text_message(sender, f"🎉 Congratulations! You've unlocked a {discount_percentage}% discount.")
+        send_text_message(sender, f"🎉 Congratulations! You've unlocked a {discount_percentage:.2f}% discount.")
 
 def handle_text_message(sender, text, current_state):
     """Handle text messages from users"""

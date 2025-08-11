@@ -346,7 +346,16 @@ def handle_text_message(sender, text, current_state):
                 # Reset state
                 redis_state.clear_user_state(sender)
         
-        return 
+        return
+    
+    # Reset to main menu if state is invalid or missing
+    if not current_state or current_state.get("step") not in ["VIEWING_CATALOG", "VIEWING_CART", "SELECTING_DELIVERY_TYPE", "WAITING_FOR_LOCATION", "SELECTING_BRANCH", "SELECTING_PAYMENT_METHOD", "WAITING_FOR_ADDRESS"]:
+        logger.info(f"Resetting state for {sender} - invalid or missing state: {current_state}")
+        redis_state.clear_user_state(sender)
+        send_main_menu(sender)
+        redis_state.set_user_state(sender, {"step": "MAIN_MENU"})
+        return
+    
     # Handle common greetings in any state
     greetings = ["hi", "hello", "hey", "hii", "namaste"]
     if any(greeting in text for greeting in greetings):
@@ -385,13 +394,6 @@ def handle_text_message(sender, text, current_state):
     elif current_state.get("step") == "SELECTING_DELIVERY_TYPE":
         # This is handled by delivery buttons
         send_delivery_options(sender)
-    # Reset to main menu if state is invalid or missing
-    if not current_state or current_state.get("step") not in ["VIEWING_CATALOG", "VIEWING_CART", "SELECTING_DELIVERY_TYPE", "WAITING_FOR_LOCATION", "SELECTING_BRANCH", "SELECTING_PAYMENT_METHOD", "WAITING_FOR_ADDRESS"]:
-        logger.info(f"Resetting state for {sender} - invalid or missing state: {current_state}")
-        redis_state.clear_user_state(sender)
-        send_main_menu(sender)
-        redis_state.set_user_state(sender, {"step": "MAIN_MENU"})
-        return
     
 
 

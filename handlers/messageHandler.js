@@ -192,10 +192,13 @@ async function handleIncomingMessage(data) {
         const sender = msg.from;
         const type = msg.type;
         const metadata = value.metadata || {};
-        const { brandConfig, phoneNumberId, catalogId } = getBrandInfoByPhoneId(
-          metadata.phone_number_id
-        );
-        setBrandContext(brandConfig, phoneNumberId, catalogId);
+        const {
+          brandConfig,
+          phoneNumberId,
+          catalogId,
+          accessToken,
+        } = getBrandInfoByPhoneId(metadata.phone_number_id);
+        setBrandContext(brandConfig, phoneNumberId, catalogId, accessToken);
         setBrandCatalog(brandConfig);
         const state = (await redisState.getUserState(sender)) || {};
 

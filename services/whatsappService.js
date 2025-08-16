@@ -8,14 +8,16 @@ const logger = getLogger('whatsapp_service');
 let brandConfig = { name: 'Kanuka Organics', catalog: [] };
 let phoneNumberId = process.env.META_PHONE_NUMBER_ID;
 let catalogId = process.env.CATALOG_ID;
+let accessToken = process.env.META_ACCESS_TOKEN;
 let WHATSAPP_API_URL = phoneNumberId
   ? `https://graph.facebook.com/v23.0/${phoneNumberId}/messages`
   : null;
 
-function setBrandContext(config, phoneId, catId) {
+function setBrandContext(config, phoneId, catId, token) {
   brandConfig = config || brandConfig;
   phoneNumberId = phoneId || phoneNumberId;
   catalogId = catId || catalogId;
+  accessToken = token || accessToken;
   WHATSAPP_API_URL = `https://graph.facebook.com/v23.0/${phoneNumberId}/messages`;
 }
 
@@ -32,7 +34,7 @@ async function sendTextMessage(to, message) {
     const res = await fetch(WHATSAPP_API_URL, {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${process.env.META_ACCESS_TOKEN}`,
+        Authorization: `Bearer ${accessToken}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify(payload)
@@ -72,14 +74,14 @@ async function sendCatalog(to) {
   };
 
   try {
-    const res = await fetch(WHATSAPP_API_URL, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${process.env.META_ACCESS_TOKEN}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
-    });
+      const res = await fetch(WHATSAPP_API_URL, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
     logger.info(`Catalog template sent. Status: ${res.status}`);
     if (!res.ok) {
       const errText = await res.text();
@@ -150,7 +152,7 @@ async function sendMainMenu(to) {
     const res = await fetch(WHATSAPP_API_URL, {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${process.env.META_ACCESS_TOKEN}`,
+        Authorization: `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(payload),
@@ -210,7 +212,7 @@ async function sendCartSummary(to, cart) {
     const res = await fetch(WHATSAPP_API_URL, {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${process.env.META_ACCESS_TOKEN}`,
+        Authorization: `Bearer ${accessToken}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify(payload)
@@ -258,7 +260,7 @@ async function sendPaymentOptions(to) {
     const res = await fetch(WHATSAPP_API_URL, {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${process.env.META_ACCESS_TOKEN}`,
+        Authorization: `Bearer ${accessToken}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify(payload)
@@ -307,7 +309,7 @@ async function sendBranchSelection(to, branches) {
     const res = await fetch(WHATSAPP_API_URL, {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${process.env.META_ACCESS_TOKEN}`,
+        Authorization: `Bearer ${accessToken}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify(payload)
@@ -347,7 +349,7 @@ async function sendPaymentLink(to, link) {
     const res = await fetch(WHATSAPP_API_URL, {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${process.env.META_ACCESS_TOKEN}`,
+        Authorization: `Bearer ${accessToken}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify(payload)

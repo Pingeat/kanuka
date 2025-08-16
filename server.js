@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const { handleWebhook, verifyWebhook } = require('./handlers/webhookHandler');
+const { handlePaymentSuccess } = require('./handlers/paymentSuccess');
 const { startCartReminderScheduler } = require('./schedulers/cartReminder');
 const { startReminderScheduler } = require('./schedulers/reminderScheduler');
 const { getLogger } = require('./utils/logger');
@@ -16,6 +17,7 @@ app.get('/health', (req, res) => {
 
 app.get('/webhook', verifyWebhook);
 app.post('/webhook', handleWebhook);
+app.get('/payment-success', handlePaymentSuccess);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {

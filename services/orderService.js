@@ -2,7 +2,11 @@ const { BRANCH_COORDINATES, DELIVERY_RADIUS_KM, ORDER_STATUS, PRODUCT_CATALOG } 
 const redisState = require('../stateHandlers/redisState');
 const { getLogger } = require('../utils/logger');
 const { generateRazorpayLink } = require('../utils/paymentUtils');
-const { sendOrderAlert } = require('./whatsappService');
+const {
+  sendOrderAlert,
+  sendOrderConfirmation,
+  sendOrderStatusUpdate
+} = require('./whatsappService');
 const logger = getLogger('order_service');
 
 function generateOrderId() {
@@ -59,20 +63,27 @@ async function placeOrder(userId, deliveryType, address = null, paymentMethod = 
     cart.branch = branch;
   }
 
-  // apply global discount if any
   const discount = await redisState.getGlobalDiscount();
-  let total = cart.items.reduce((sum, i) => sum + i.price * i.quantity, 0);
-  if (discount) {
-    total = total - (total * discount) / 100;
-  }
+  const actualTotal = cart.items.reduce(
+    (sum, i) => sum + i.price * i.quantity,
+    0
+  );
+  const discountAmount = discount ? (actualTotal * discount) / 100 : 0;
+  const total = actualTotal - discountAmount;
 
   const orderId = generateOrderId();
   const order = {
     order_id: orderId,
     user_id: userId,
     items: cart.items,
+    actual_total: actualTotal,
+    discount_percentage: discount || 0,
+    discount_amount: discountAmount,
     total,
-    status: paymentMethod === 'Cash on Delivery' ? ORDER_STATUS.PAID : ORDER_STATUS.PENDING,
+    status:
+      paymentMethod === 'Cash on Delivery'
+        ? ORDER_STATUS.PAID
+        : ORDER_STATUS.PENDING,
     delivery_type: deliveryType,
     delivery_address: address || cart.address,
     payment_method: paymentMethod,
@@ -86,7 +97,7 @@ async function placeOrder(userId, deliveryType, address = null, paymentMethod = 
 
   await redisState.createOrder(order);
 
-  if (order.branch) {
+  if (order.branch && paymentMethod === 'Cash on Delivery') {
     try {
       await sendOrderAlert(
         order.branch,
@@ -95,7 +106,10 @@ async function placeOrder(userId, deliveryType, address = null, paymentMethod = 
         order.total,
         userId,
         order.delivery_address,
-        deliveryType
+        deliveryType,
+        paymentMethod,
+        order.discount_percentage,
+        order.discount_amount
       );
     } catch (err) {
       logger.error(`Failed to send order alert: ${err.message}`);
@@ -126,21 +140,43 @@ async function updateOrderStatusFromCommand(command) {
   const lower = command.toLowerCase();
   let status = null;
   if (lower.includes('ready')) status = ORDER_STATUS.READY;
-  else if (lower.includes('ontheway') || lower.includes('on the way')) status = ORDER_STATUS.ON_THE_WAY;
+  else if (lower.includes('ontheway') || lower.includes('on the way'))
+    status = ORDER_STATUS.ON_THE_WAY;
   else if (lower.includes('delivered')) status = ORDER_STATUS.DELIVERED;
   const parts = lower.split(/\s+/);
   const orderId = parts[parts.length - 1].toUpperCase();
   if (!status || !orderId) return { success: false, message: 'Invalid command' };
+  const order = await redisState.getOrder(orderId);
+  if (!order) return { success: false, message: 'Order not found' };
   const ok = await redisState.updateOrderStatus(orderId, status);
-  return { success: ok };
+  if (!ok) return { success: false, message: 'Update failed' };
+  await sendOrderStatusUpdate(order.user_id, orderId, status);
+  if (status === ORDER_STATUS.DELIVERED) {
+    await redisState.archiveOrder(order);
+  }
+  return { success: true, message: `Order ${orderId} status updated` };
 }
 
-async function confirmOrder(whatsappNumber, orderId, paymentMethod) {
+async function confirmOrder(whatsappNumber, orderId, paymentMethod = 'Online') {
   logger.info(`Confirming order ${orderId} for ${whatsappNumber}`);
   const order = await redisState.getOrder(orderId);
   if (!order) return { success: false };
-  order.status = ORDER_STATUS.DELIVERED;
-  await redisState.archiveOrder(order);
+  await redisState.updateOrderStatus(orderId, ORDER_STATUS.PAID);
+  if (order.branch) {
+    await sendOrderAlert(
+      order.branch,
+      orderId,
+      order.items,
+      order.total,
+      whatsappNumber,
+      order.delivery_address,
+      order.delivery_type,
+      paymentMethod,
+      order.discount_percentage,
+      order.discount_amount
+    );
+  }
+  await sendOrderConfirmation(whatsappNumber, orderId);
   return { success: true };
 }
 

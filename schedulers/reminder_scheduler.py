@@ -1,5 +1,6 @@
 # handlers/reminder_handler.py
 import json
+import os
 from config.settings import DAILY_REMINDER_TIME
 from services.whatsapp_service import send_cart_reminder
 from stateHandlers.redis_state import redis_state
@@ -11,6 +12,7 @@ import time as time_module
 from utils.time_utils import get_current_ist
 
 logger = get_logger("reminder_handler")
+BRAND_ID = os.getenv("BRAND_ID", "default").lower()
 
 def process_cart_reminders():
     """Process pending cart reminders"""
@@ -31,7 +33,9 @@ def process_cart_reminders():
         log_cart_reminder(user_id, order_id)
         
         # Remove from pending reminders
-        redis_state.redis.lrem("cart:reminders", 0, json.dumps(reminder))
+        redis_state.redis.lrem(
+            f"cart:{BRAND_ID}:reminders", 0, json.dumps(reminder)
+        )
     
     logger.info(f"Processed {len(reminders)} cart reminders")
 

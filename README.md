@@ -9,6 +9,14 @@ that receives the message. The mapping from `phone_number_id` values to brand
 configurations is defined in `config/brandPhones.json`. Each entry also stores the
 corresponding `catalog_id` required by the Meta API.
 
+### Razorpay webhooks
+
+Each brand requires its own Razorpay webhook secret. Configure an environment
+variable `RAZORPAY_WEBHOOK_SECRET_<BRAND>` for every brand (e.g.
+`RAZORPAY_WEBHOOK_SECRET_KANUKA`). The `/payment-made` endpoint will validate
+incoming webhooks against these secrets to determine the correct brand context.
+Set the same secret in the Razorpay dashboard when creating each brand's webhook.
+
 Two sample brands are included:
 
 - `kanuka` mapped to `phone_number_id` `747499348442635`

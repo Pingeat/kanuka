@@ -1,7 +1,17 @@
 require('dotenv').config();
 const { getLogger } = require('../utils/logger');
 const { BRANCH_CONTACTS, OTHER_NUMBERS } = require('../config/settings');
+
 const logger = getLogger('whatsapp_service');
+
+// Construct the WhatsApp API URL from the phone number ID to avoid relying on
+// string interpolation inside environment files which aren't parsed by
+// `dotenv`.
+const phoneNumberId = process.env.META_PHONE_NUMBER_ID;
+if (!phoneNumberId) {
+  logger.error('META_PHONE_NUMBER_ID is not defined');
+}
+const WHATSAPP_API_URL = `https://graph.facebook.com/v23.0/${phoneNumberId}/messages`;
 
 async function sendTextMessage(to, message) {
   logger.info(`Sending message to ${to}`);
@@ -13,7 +23,7 @@ async function sendTextMessage(to, message) {
   };
 
   try {
-    const res = await fetch(process.env.WHATSAPP_API_URL, {
+    const res = await fetch(WHATSAPP_API_URL, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${process.env.META_ACCESS_TOKEN}`,

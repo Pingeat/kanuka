@@ -32,7 +32,7 @@
 # WhatsApp API credentials
 META_ACCESS_TOKEN = "EAASgG9eRTmYBPOUpKGuAYED0616Pn3F1gfTwQ0Hxp5vYsKxFgAnfDXXU0XnWePwqiIuIM2S3t5XYJrZB59AS9t9IVoZBUp9qHY1Pk3aMTbh9cHXyDLntUJKZC3TmwABjoS2JB2iUzXq0TKMRMdWnov9OqSPx2JhZCQJMQZCckxZASvWWByLgmriYzgKGBUS1aW"
 META_PHONE_NUMBER_ID = "747499348442635"
-WHATSAPP_API_URL = "https://graph.facebook.com/v23.0/747499348442635/messages"
+WHATSAPP_API_URL = f"https://graph.facebook.com/v23.0/{META_PHONE_NUMBER_ID}/messages"
 WHATSAPP_CATALOG_ID = "1454851805648535"  # Optional, if using WhatsApp Catalog
 
 # Verification token for webhook

@@ -40,15 +40,15 @@ def get_logger(name):
     # Only add handler if it doesn't already have one
     if not logger.handlers:
         logger.setLevel(logging.INFO)
-        
+
         # Create formatter
         formatter = logging.Formatter(
             '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
         )
-        
+
         # Create console handler
         ch = logging.StreamHandler()
         ch.setFormatter(formatter)
         logger.addHandler(ch)
-    
+
     return logger

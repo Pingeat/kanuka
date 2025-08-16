@@ -2,11 +2,13 @@
   "747499348442635": {
     "brand_id": "kanuka",
     "display_phone_number": "917989884303",
-    "catalog_id": "CATALOG_KANUKA"
+    "catalog_id_env": "CATALOG_ID_KANUKA",
+    "access_token_env": "META_ACCESS_TOKEN_KANUKA"
   },
   "9876543210": {
     "brand_id": "zumi",
     "display_phone_number": "987654321",
-    "catalog_id": "CATALOG_ZUMI"
+    "catalog_id_env": "CATALOG_ID_ZUMI",
+    "access_token_env": "META_ACCESS_TOKEN_ZUMI"
   }
 }

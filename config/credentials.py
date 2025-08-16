@@ -1,51 +1,51 @@
+import os
 
 
-# META_ACCESS_TOKEN = "EAASgG9eRTmYBPJ7Takvau9H1RLk3UTEkrevSPfqhWKXmkqLhaip6GeBYKrDhrol5Q91JRi4DaeZCmkgIMTIKKkA2VBt4csl7l05JAt8aUOSvwjvFS26gPUYbDBja6RpBpxybgX0byLXFsW8lkgDYkh0ieJFKCFFheVH0IZCFwq8fwc8AQPxLrZAqlip0igo"
-# META_PHONE_NUMBER_ID = "747499348442635"
-# META_VERIFY_TOKEN = "kanuka123"
-# GOOGLE_MAPS_API_KEY = "AIzaSyCuUz9N78WZAT1N38ffIDkbySI3_0zkZgE"
-# RAZORPAY_KEY_ID = "rzp_live_jtGMQ5k5QGHxFg"
-# RAZORPAY_KEY_SECRET = "FEMHAO4zeUFnAiKZPLe44NRN"
-# WHATSAPP_API_URL = f"https://graph.facebook.com/v23.0/{META_PHONE_NUMBER_ID}/messages" 
-# CATALOG_ID = "1454851805648535"
-# CATALOG_ID_FOR_MATCHED_ITEMS = "1454851805648535"
+def load_brand_credentials(brand_id: str | None = None) -> dict:
+    """Load brand-specific credentials from environment variables.
+
+    Credentials are expected to follow the pattern
+    META_ACCESS_TOKEN_<BRAND>, META_PHONE_NUMBER_ID_<BRAND>, and
+    CATALOG_ID_<BRAND>. The brand identifier is upper-cased before
+    lookup. If no brand_id is supplied, the BRAND_ID environment
+    variable is used.
+    """
+
+    brand = (brand_id or os.getenv("BRAND_ID", "")).upper()
+
+    access_token = os.getenv(f"META_ACCESS_TOKEN_{brand}")
+    phone_number_id = os.getenv(f"META_PHONE_NUMBER_ID_{brand}")
+    catalog_id = os.getenv(f"CATALOG_ID_{brand}")
+    verify_token = os.getenv("META_VERIFY_TOKEN")
+
+    whatsapp_api_url = (
+        f"https://graph.facebook.com/v23.0/{phone_number_id}/messages"
+        if phone_number_id
+        else None
+    )
+
+    return {
+        "META_ACCESS_TOKEN": access_token,
+        "META_PHONE_NUMBER_ID": phone_number_id,
+        "WHATSAPP_CATALOG_ID": catalog_id,
+        "META_VERIFY_TOKEN": verify_token,
+        "WHATSAPP_API_URL": whatsapp_api_url,
+    }
 
 
-# config/credentials.py
-# import os
-
-# class Credentials:
-#     REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
-#     RAZORPAY_KEY = os.getenv("RAZORPAY_KEY")
-#     RAZORPAY_SECRET = os.getenv("RAZORPAY_SECRET")
-#     WHATSAPP_TOKEN = os.getenv("META_ACCESS_TOKEN")
-#     WHATSAPP_API_URL = os.getenv("WHATSAPP_API_URL")
-#     PHONE_NUMBER_ID = os.getenv("META_PHONE_NUMBER_ID")
-#     VERIFY_TOKEN = os.getenv("META_VERIFY_TOKEN")
-#     ADMIN_PHONE = os.getenv("ADMIN_PHONE")  # For order alerts
-#     CATALOG_ID = os.getenv("CATALOG_ID")  # For order alerts
-#     CATALOG_ID_FOR_MATCHED_ITEMS = os.getenv("CATALOG_ID_FOR_MATCHED_ITEMS")  # For order alerts
+_creds = load_brand_credentials()
+META_ACCESS_TOKEN = _creds["META_ACCESS_TOKEN"]
+META_PHONE_NUMBER_ID = _creds["META_PHONE_NUMBER_ID"]
+WHATSAPP_CATALOG_ID = _creds["WHATSAPP_CATALOG_ID"]
+META_VERIFY_TOKEN = _creds["META_VERIFY_TOKEN"]
+WHATSAPP_API_URL = _creds["WHATSAPP_API_URL"]
 
 
-# config/credentials.py
+REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+RAZORPAY_KEY_ID = os.getenv("RAZORPAY_KEY_ID")
+RAZORPAY_KEY_SECRET = os.getenv("RAZORPAY_KEY_SECRET")
+GOOGLE_MAPS_API_KEY = os.getenv("GOOGLE_MAPS_API_KEY")
 
-# WhatsApp API credentials
-META_ACCESS_TOKEN = "EAASgG9eRTmYBPDaWHO0wdumCZAiyit9vcDw6iCYwHvEqZBdyHhVliAB3l7GKtu9MHALhHtiotjr1LMQaS1bn9YcMZAkSBPtq5RHALpSAGwV6DQscMqIbanejXN3JfXlngqZBSxuvHewHOBzGVruDYYA6Fl7m5nPMZAbDvnGSvMQUvZBxn3IykpjCl3crVg"
-META_PHONE_NUMBER_ID = "747499348442635"
-WHATSAPP_API_URL = f"https://graph.facebook.com/v23.0/{META_PHONE_NUMBER_ID}/messages"
-WHATSAPP_CATALOG_ID = "1454851805648535"  # Optional, if using WhatsApp Catalog
-
-# Verification token for webhook
-META_VERIFY_TOKEN = "kanuka123"
-
-# Redis connection
-REDIS_URL = "redis://localhost:6379/0"
-
-# Razorpay credentials
-RAZORPAY_KEY_ID = "rzp_live_jtGMQ5k5QGHxFg"
-RAZORPAY_KEY_SECRET = "FEMHAO4zeUFnAiKZPLe44NRN"
-
-GOOGLE_MAPS_API_KEY = "AIzaSyCuUz9N78WZAT1N38ffIDkbySI3_0zkZgE"
 
 # CSV file paths (relative to project root)
 ORDERS_CSV = "../data/orders.csv"
@@ -53,3 +53,4 @@ CART_REMINDERS_CSV = "../data/cart_reminders.csv"
 USER_ACTIVITY_LOG_CSV = "../data/user_activity_log.csv"
 BRANCHES_CSV = "../data/branches.csv"
 BRANDS_CSV = "../data/brands.csv"
+

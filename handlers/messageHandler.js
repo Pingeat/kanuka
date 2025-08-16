@@ -87,25 +87,25 @@ async function handleText(sender, text, state) {
   } else if (/^set discount \d+/.test(text)) {
     const value = parseInt(text.split(' ')[2]);
     await redisState.setGlobalDiscount(value);
-    await sendTextMessage(sender, `Discount set to ${value}%`);
+    await sendTextMessage(sender, `🎯 Discount set to ${value}%!`);
   } else if (text === 'clear discount') {
     await redisState.clearGlobalDiscount();
-    await sendTextMessage(sender, 'Discount cleared');
+    await sendTextMessage(sender, '✅ Discount cleared');
   } else {
     const res = await updateOrderStatusFromCommand(text);
     if (res.success) {
-      await sendTextMessage(sender, res.message || 'Order status updated');
+      await sendTextMessage(sender, res.message || '📦 Order status updated');
     } else if (res.message) {
       await sendTextMessage(sender, res.message);
     } else {
-      await sendTextMessage(sender, 'Unsupported command');
+      await sendTextMessage(sender, '⚠️ Unsupported command');
     }
   }
 }
 
 async function handleListReply(sender, id) {
   await redisState.setBranch(sender, id);
-  await sendTextMessage(sender, `Branch selected: ${id}`);
+  await sendTextMessage(sender, `📍 Branch selected: ${id}`);
   await sendCatalog(sender);
   await redisState.setUserState(sender, { step: STATES.VIEWING_CATALOG });
 }
@@ -156,14 +156,14 @@ async function handleButtonReply(sender, id, state) {
       break;
     }
     default:
-      await sendTextMessage(sender, 'Unknown action');
+      await sendTextMessage(sender, '❓ Unknown action');
   }
 }
 
 async function handleCatalogSelection(sender, productId) {
   const product = PRODUCT_CATALOG[productId];
   if (!product) {
-    await sendTextMessage(sender, 'Product not found');
+    await sendTextMessage(sender, '❌ Product not found');
     return;
   }
   await redisState.addToCart(sender, {
@@ -218,7 +218,7 @@ async function handleIncomingMessage(data) {
             );
             await redisState.setUserState(sender, { step: STATES.ENTERING_ADDRESS, address: '' });
           } else {
-            await sendTextMessage(sender, 'Sorry, we do not deliver to your location');
+            await sendTextMessage(sender, '🚫 Sorry, we do not deliver to your location.');
           }
         }
       }

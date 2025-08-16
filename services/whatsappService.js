@@ -47,9 +47,9 @@ async function sendTextMessage(to, message) {
 async function sendCatalog(to) {
   logger.info(`Sending catalog to ${to}`);
   const message =
-    '🌟 *EXPLORE OUR PRODUCTS*\n\n' +
-    'Browse our catalog and select items to add to your cart.\n\n' +
-    'Tap the button below to view our catalog:';
+    '🌟 *Explore Our Organic Products* 🌿\n\n' +
+    'Browse our catalog and add your favourites to the cart.\n\n' +
+    '👇 Tap below to get started!';
 
   const payload = {
     messaging_product: 'whatsapp',
@@ -96,11 +96,11 @@ async function sendOrderConfirmation(to, orderId) {
   }
 
   let message =
-    `✅ *ORDER CONFIRMED*\n\n` +
-    `Order ID: #${order.order_id}\n` +
-    `Branch: ${order.branch}\n` +
-    `Payment Method: ${order.payment_method}\n\n` +
-    'ORDER ITEMS:\n';
+    `✅ *ORDER CONFIRMED* 🎉\n\n` +
+    `📦 Order ID: #${order.order_id}\n` +
+    `🏪 Branch: ${order.branch}\n` +
+    `💳 Payment Method: ${order.payment_method}\n\n` +
+    '🛍️ *ORDER ITEMS*:\n';
 
   for (const item of order.items) {
     const itemTotal = item.price * item.quantity;
@@ -114,15 +114,14 @@ async function sendOrderConfirmation(to, orderId) {
         order.discount_amount
       )}\n`;
   }
-  message += `*TOTAL PAYABLE*: ₹${Math.ceil(order.total)}\n\n`;
-  message +=
-    'Your order will be processed shortly. Thank you for shopping with Kanuka Organics!';
+  message += `\n*TOTAL PAYABLE*: ₹${Math.ceil(order.total)}\n\n`;
+  message += '🙏 Thanks for shopping with Kanuka Organics!';
 
   await sendTextMessage(to, message);
 }
 
 async function sendMainMenu(to) {
-  const message = 'Welcome to Kanuka Organics!';
+  const message = '🌿 Welcome to *Kanuka Organics*! 🌿\nHow can we assist you today?';
   const payload = {
     messaging_product: 'whatsapp',
     recipient_type: 'individual',
@@ -135,7 +134,7 @@ async function sendMainMenu(to) {
         buttons: [
           {
             type: 'reply',
-            reply: { id: 'ORDER_NOW', title: '🛍️ Order Now' },
+            reply: { id: 'ORDER_NOW', title: '🛍️ Shop Now' },
           },
         ],
       },
@@ -170,9 +169,10 @@ async function sendCartSummary(to, cart) {
   }
 
   const lines = cart.items.map(
-    (i) => `${i.quantity} x ${i.name} = ${i.price * i.quantity}`
+    (i) => `• ${i.quantity} × ${i.name} = ₹${i.price * i.quantity}`
   );
-  const message = `🛒 *Cart Summary*\n${lines.join('\n')}\nTotal: ${cart.total}`;
+  const message =
+    `🛒 *Cart Summary*\n${lines.join('\n')}\n*Total*: ₹${cart.total}\n\nSelect an option below:`;
 
   const payload = {
     messaging_product: 'whatsapp',
@@ -223,7 +223,8 @@ async function sendCartSummary(to, cart) {
 }
 
 async function sendPaymentOptions(to) {
-  const message = '💳 *PAYMENT OPTIONS*\n\nHow would you like to pay for your order?';
+  const message =
+    '💳 *Payment Options*\n\nPlease choose your preferred payment method:';
 
   const payload = {
     messaging_product: 'whatsapp',
@@ -270,7 +271,7 @@ async function sendPaymentOptions(to) {
 }
 
 async function sendLocationRequest(to) {
-  await sendTextMessage(to, 'Please share your location to proceed');
+  await sendTextMessage(to, '📍 Please share your location to proceed.');
 }
 
 async function sendBranchSelection(to, branches) {
@@ -360,7 +361,7 @@ async function sendPaymentLink(to, link) {
 
 async function sendCartReminder(to, cart) {
   const items = cart.items.map(i => `${i.quantity} x ${i.name}`).join(', ');
-  const message = `You have items waiting in your cart: ${items}. Complete your order!`;
+  const message = `🛍️ You have items waiting in your cart: ${items}. ⚡ Complete your order!`;
   await sendTextMessage(to, message);
 }
 
@@ -425,7 +426,7 @@ async function sendOrderStatusUpdate(to, orderId, status) {
       message = `📦 Your order #${orderId} has been delivered.`;
       break;
     default:
-      message = `Order #${orderId} status: ${status}`;
+      message = `ℹ️ Order #${orderId} status: ${status}`;
   }
   await sendTextMessage(to, message);
 }

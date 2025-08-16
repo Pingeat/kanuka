@@ -1,5 +1,6 @@
 require('dotenv').config();
 const express = require('express');
+const path = require('path');
 const { handleWebhook, verifyWebhook } = require('./handlers/webhookHandler');
 const { handlePaymentSuccess } = require('./handlers/paymentSuccess');
 const { handlePaymentWebhook } = require('./handlers/paymentWebhook');
@@ -19,6 +20,14 @@ app.use(
   })
 );
 
+// Serve static assets for chat interface
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Basic route to serve the chat page
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
 });
@@ -27,6 +36,12 @@ app.get('/webhook', verifyWebhook);
 app.post('/webhook', handleWebhook);
 app.get('/payment-success', handlePaymentSuccess);
 app.post('/payment-made', handlePaymentWebhook);
+
+// Simple endpoint to echo chat messages
+app.post('/message', (req, res) => {
+  const { message } = req.body || {};
+  res.json({ reply: `Echo: ${message || ''}` });
+});
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {

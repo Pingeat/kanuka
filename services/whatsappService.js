@@ -1,6 +1,6 @@
 require('dotenv').config();
 const { getLogger } = require('../utils/logger');
-const { BRANCH_CONTACTS, OTHER_NUMBERS } = require('../config/settings');
+const { BRANCH_CONTACTS, OTHER_NUMBERS, ORDER_STATUS } = require('../config/settings');
 const redisState = require('../stateHandlers/redisState');
 
 const logger = getLogger('whatsapp_service');
@@ -107,8 +107,16 @@ async function sendOrderConfirmation(to, orderId) {
     message += `• ${item.name} x${item.quantity} = ₹${itemTotal}\n`;
   }
 
-  message += `\n*TOTAL*: ₹${Math.ceil(order.total)}\n\n`;
-  message += 'Your order will be processed shortly. Thank you for shopping with Kanuka Organics!';
+  if (order.discount_percentage && order.discount_percentage > 0) {
+    message +=
+      `\nSubtotal: ₹${Math.ceil(order.actual_total)}\n` +
+      `Discount (${Math.ceil(order.discount_percentage)}%): -₹${Math.ceil(
+        order.discount_amount
+      )}\n`;
+  }
+  message += `*TOTAL PAYABLE*: ₹${Math.ceil(order.total)}\n\n`;
+  message +=
+    'Your order will be processed shortly. Thank you for shopping with Kanuka Organics!';
 
   await sendTextMessage(to, message);
 }
@@ -311,7 +319,43 @@ async function sendBranchSelection(to, branches) {
 }
 
 async function sendPaymentLink(to, link) {
-  await sendTextMessage(to, `Complete payment using this link: ${link}`);
+  const token = link.split('/').pop();
+  const payload = {
+    messaging_product: 'whatsapp',
+    to,
+    type: 'template',
+    template: {
+      name: 'pays_online',
+      language: { code: 'en_US' },
+      components: [
+        {
+          type: 'button',
+          sub_type: 'url',
+          index: 0,
+          parameters: [{ type: 'text', text: token }]
+        }
+      ]
+    }
+  };
+  try {
+    const res = await fetch(WHATSAPP_API_URL, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${process.env.META_ACCESS_TOKEN}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) {
+      const errText = await res.text();
+      logger.error(`Payment link template error: ${errText}`);
+      await sendTextMessage(to, `Complete payment using this link: ${link}`);
+    }
+    return res;
+  } catch (err) {
+    logger.error(`Failed to send payment link template: ${err.message}`);
+    await sendTextMessage(to, `Complete payment using this link: ${link}`);
+  }
 }
 
 async function sendCartReminder(to, cart) {
@@ -320,29 +364,70 @@ async function sendCartReminder(to, cart) {
   await sendTextMessage(to, message);
 }
 
-async function sendOrderAlert(branch, orderId, items, total, sender, deliveryAddress, deliveryType) {
+async function sendOrderAlert(
+  branch,
+  orderId,
+  items,
+  total,
+  sender,
+  deliveryAddress,
+  deliveryType,
+  paymentMethod,
+  discountPercentage,
+  discountAmount
+) {
   logger.info(`Sending order alert to ${branch} for order ${orderId}`);
   const recipients = [
     ...(BRANCH_CONTACTS[branch] || []),
     ...OTHER_NUMBERS
   ];
 
-  const lines = items.map(i => `• ${i.quantity} x ${i.name} = ₹${i.price * i.quantity}`).join('\n');
-  let message = `🔔 *NEW ORDER ALERT*\n\n` +
+  const lines = items
+    .map((i) => `• ${i.quantity} x ${i.name} = ₹${i.price * i.quantity}`)
+    .join('\n');
+  let message =
+    `🔔 *NEW ORDER ALERT*\n\n` +
     `Order ID: #${orderId}\n` +
     `Customer: ${sender}\n` +
     `Delivery Type: ${deliveryType}\n` +
+    `Payment Method: ${paymentMethod}\n` +
     `Branch: ${branch}\n`;
 
   if (deliveryType === 'Delivery' && deliveryAddress) {
     message += `\nDELIVERY ADDRESS:\n${deliveryAddress}\n`;
   }
 
-  message += `\nORDER ITEMS:\n${lines}\n\n*TOTAL PAYABLE*: ₹${Math.ceil(total)}\n\nPlease prepare this order as soon as possible.`;
+  message += `\nORDER ITEMS:\n${lines}\n\n`;
+  if (discountPercentage && discountPercentage > 0) {
+    message +=
+      `Subtotal: ₹${Math.ceil(total + discountAmount)}\n` +
+      `Discount (${Math.ceil(discountPercentage)}%): -₹${Math.ceil(
+        discountAmount
+      )}\n`;
+  }
+  message += `*TOTAL PAYABLE*: ₹${Math.ceil(total)}\n\nPlease prepare this order as soon as possible.`;
 
   for (const to of recipients) {
     await sendTextMessage(to, message);
   }
+}
+
+async function sendOrderStatusUpdate(to, orderId, status) {
+  let message;
+  switch (status) {
+    case ORDER_STATUS.READY:
+      message = `✅ Your order #${orderId} is ready for pickup.`;
+      break;
+    case ORDER_STATUS.ON_THE_WAY:
+      message = `🚚 Your order #${orderId} is on the way.`;
+      break;
+    case ORDER_STATUS.DELIVERED:
+      message = `📦 Your order #${orderId} has been delivered.`;
+      break;
+    default:
+      message = `Order #${orderId} status: ${status}`;
+  }
+  await sendTextMessage(to, message);
 }
 
 module.exports = {
@@ -356,5 +441,6 @@ module.exports = {
   sendLocationRequest,
   sendBranchSelection,
   sendPaymentLink,
-  sendOrderAlert
+  sendOrderAlert,
+  sendOrderStatusUpdate
 };

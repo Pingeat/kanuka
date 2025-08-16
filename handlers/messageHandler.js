@@ -11,6 +11,7 @@ const {
   sendPaymentLink
 } = require('../services/whatsappService');
 const { placeOrder, isWithinDeliveryRadius, updateOrderStatusFromCommand } = require('../services/orderService');
+const { geocodeAddress } = require('../utils/geocode');
 const { logUserActivity } = require('../utils/csvLogger');
 const { PRODUCT_CATALOG, BRANCH_COORDINATES } = require('../config/settings');
 const { getLogger } = require('../utils/logger');
@@ -27,10 +28,41 @@ const STATES = {
 
 async function handleText(sender, text, state) {
   logUserActivity(sender, 'message_received', text);
+
   if (state && state.step === STATES.ENTERING_ADDRESS) {
     await redisState.setAddress(sender, text);
     await sendPaymentOptions(sender);
     await redisState.setUserState(sender, { step: STATES.CHOOSING_PAYMENT });
+    return;
+  }
+
+  if (state && state.step === STATES.SELECTING_DELIVERY) {
+    const geo = await geocodeAddress(text);
+    if (geo) {
+      await redisState.setLocation(sender, geo.latitude, geo.longitude);
+      const { within, branch } = isWithinDeliveryRadius(
+        geo.latitude,
+        geo.longitude
+      );
+      if (within) {
+        await redisState.setBranch(sender, branch);
+        await sendTextMessage(
+          sender,
+          `🎉 Great news! You're near our ${branch} branch. Please send your address.`
+        );
+        await redisState.setUserState(sender, {
+          step: STATES.ENTERING_ADDRESS,
+          address: ''
+        });
+      } else {
+        await sendTextMessage(
+          sender,
+          '❌ Sorry, we do not deliver to that location.'
+        );
+      }
+    } else {
+      await sendTextMessage(sender, '❌ Sorry, we could not find that location.');
+    }
     return;
   }
 
@@ -62,7 +94,9 @@ async function handleText(sender, text, state) {
   } else {
     const res = await updateOrderStatusFromCommand(text);
     if (res.success) {
-      await sendTextMessage(sender, 'Order status updated');
+      await sendTextMessage(sender, res.message || 'Order status updated');
+    } else if (res.message) {
+      await sendTextMessage(sender, res.message);
     } else {
       await sendTextMessage(sender, 'Unsupported command');
     }
@@ -89,6 +123,13 @@ async function handleButtonReply(sender, id, state) {
       break;
     }
     case 'PROCEED_TO_CHECKOUT': {
+      const discount = await redisState.getGlobalDiscount();
+      if (discount) {
+        await sendTextMessage(
+          sender,
+          `🎉 Congratulations! You've unlocked a ${discount}% discount.`
+        );
+      }
       await sendLocationRequest(sender);
       await redisState.setUserState(sender, { step: STATES.SELECTING_DELIVERY });
       break;
@@ -171,7 +212,10 @@ async function handleIncomingMessage(data) {
           const { within, branch } = isWithinDeliveryRadius(latitude, longitude);
           if (within) {
             await redisState.setBranch(sender, branch);
-            await sendTextMessage(sender, `Nearest branch: ${branch}. Please send your address.`);
+            await sendTextMessage(
+              sender,
+              `🎉 Great news! You're near our ${branch} branch. Please send your address.`
+            );
             await redisState.setUserState(sender, { step: STATES.ENTERING_ADDRESS, address: '' });
           } else {
             await sendTextMessage(sender, 'Sorry, we do not deliver to your location');

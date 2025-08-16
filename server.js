@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const { handleWebhook, verifyWebhook } = require('./handlers/webhookHandler');
 const { startCartReminderScheduler } = require('./schedulers/cartReminder');

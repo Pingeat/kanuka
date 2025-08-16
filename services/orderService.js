@@ -2,6 +2,7 @@ const { BRANCH_COORDINATES, DELIVERY_RADIUS_KM, ORDER_STATUS, PRODUCT_CATALOG } 
 const redisState = require('../stateHandlers/redisState');
 const { getLogger } = require('../utils/logger');
 const { generateRazorpayLink } = require('../utils/paymentUtils');
+const { sendOrderAlert } = require('./whatsappService');
 const logger = getLogger('order_service');
 
 function generateOrderId() {
@@ -80,18 +81,45 @@ async function placeOrder(userId, deliveryType, address = null, paymentMethod = 
   };
 
   if (paymentMethod !== 'Cash on Delivery') {
-    order.payment_link = generateRazorpayLink(total, orderId);
+    order.payment_link = await generateRazorpayLink(total, orderId);
   }
 
   await redisState.createOrder(order);
+
+  if (order.branch) {
+    try {
+      await sendOrderAlert(
+        order.branch,
+        orderId,
+        order.items,
+        order.total,
+        userId,
+        order.delivery_address,
+        deliveryType
+      );
+    } catch (err) {
+      logger.error(`Failed to send order alert: ${err.message}`);
+    }
+  }
+
   await redisState.clearCart(userId);
   return { success: true, order_id: orderId, payment_link: order.payment_link };
 }
 
 async function processPayment(userId, orderId) {
   logger.info(`Processing payment for ${userId} and order ${orderId}`);
-  // Real implementation would integrate with payment gateway
-  return { success: true };
+  const order = await redisState.getOrder(orderId);
+  if (!order) {
+    return { success: false, message: 'Order not found' };
+  }
+  try {
+    const link = await generateRazorpayLink(order.total, orderId);
+    order.payment_link = link;
+    return { success: true, payment_link: link };
+  } catch (err) {
+    logger.error(`Payment processing failed: ${err.message}`);
+    return { success: false, message: 'Payment processing failed' };
+  }
 }
 
 async function updateOrderStatusFromCommand(command) {

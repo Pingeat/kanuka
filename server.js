@@ -13,7 +13,8 @@ const app = express();
 app.use(
   express.json({
     verify: (req, res, buf) => {
-      req.rawBody = buf;
+      // Store the raw request body for Razorpay signature verification
+      req.rawBody = buf.toString();
     }
   })
 );

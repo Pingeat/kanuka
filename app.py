@@ -4,6 +4,7 @@ from flask import Flask
 from handlers.webhook_handler import webhook_bp
 from handlers.reminder_handler import start_scheduler
 from utils.logger import get_logger
+from config.settings import BRAND_NAME
 
 # Create data directory if it doesn't exist
 os.makedirs("data", exist_ok=True)
@@ -17,7 +18,7 @@ logger = get_logger("app")
 
 @app.route("/")
 def home():
-    return "Kanuka Organics Retail WhatsApp Bot is running!"
+    return f"{BRAND_NAME} Retail WhatsApp Bot is running!"
 
 if __name__ == "__main__":
     # Start the scheduler

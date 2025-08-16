@@ -1,4 +1,18 @@
-# Kanuka
+# Multi-brand WhatsApp Bot
+
+This project provides a WhatsApp bot server that can serve multiple brands.
+Brand specific details such as name, bulk order contacts and product catalog
+are loaded from JSON files in `config/brands`.
+
+The active brand is selected automatically based on the WhatsApp `phone_number_id`
+that receives the message. The mapping from `phone_number_id` values to brand
+configurations is defined in `config/brandPhones.json`. Each entry also stores the
+corresponding `catalog_id` required by the Meta API.
+
+Two sample brands are included:
+
+- `kanuka_organics` mapped to `phone_number_id` `747499348442635`
+- `zumi` mapped to `phone_number_id` `9876543210`
 
 ## Setup on AWS
 

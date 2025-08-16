@@ -1,0 +1,26 @@
+{
+  "name": "Zumi",
+  "logo_url": "https://zumi.com/logo.png",
+  "bulk_contact": {
+    "phone": "+919876543210",
+    "email": "hello@zumi.com"
+  },
+  "catalog": [
+    {
+      "id": "6xpxtkaoau",
+      "name": "Palm Jaggery - Powdered (700gms)",
+      "price": 760.0,
+      "original_price": 910.0,
+      "category": "Jaggery Products",
+      "description": "Premium quality palm jaggery in powdered form"
+    },
+    {
+      "id": "kyygkhdlxf",
+      "name": "Palm Jaggery - Cubes (1 KG)",
+      "price": 1100.0,
+      "original_price": 1300.0,
+      "category": "Jaggery Products",
+      "description": "Premium quality palm jaggery in cube form"
+    }
+  ]
+}

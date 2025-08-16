@@ -431,7 +431,7 @@ def send_order_confirmation(to, order_id, branch, items, total, payment_method):
     if payment_method == "Pay Now":
         message += "Please wait while we generate your payment link..."
     else:
-        message += "Your order will be processed shortly. Thank you for shopping with Kanuka Organics!"
+        message += f"Your order will be processed shortly. Thank you for shopping with {BRAND_NAME}!"
     
     return send_text_message(to, message)
 
@@ -641,7 +641,7 @@ def send_final_order_confirmation(to, order_id, address):
         message += f"• {item['name']} x{item['quantity']} = ₹{item_total}\n"
     
     message += f"\n*TOTAL*: ₹{order['total']}\n\n" \
-             "Your order will be processed shortly. Thank you for shopping with Kanuka Organics!"
+             f"Your order will be processed shortly. Thank you for shopping with {BRAND_NAME}!"
     
     return send_text_message(to, message)
 

@@ -1,6 +1,7 @@
 require('dotenv').config();
 const { getLogger } = require('../utils/logger');
 const { BRANCH_CONTACTS, OTHER_NUMBERS } = require('../config/settings');
+const redisState = require('../stateHandlers/redisState');
 
 const logger = getLogger('whatsapp_service');
 
@@ -45,14 +46,113 @@ async function sendTextMessage(to, message) {
 
 async function sendCatalog(to) {
   logger.info(`Sending catalog to ${to}`);
+  const message =
+    '🌟 *EXPLORE OUR PRODUCTS*\n\n' +
+    'Browse our catalog and select items to add to your cart.\n\n' +
+    'Tap the button below to view our catalog:';
+
+  const payload = {
+    messaging_product: 'whatsapp',
+    recipient_type: 'individual',
+    to,
+    type: 'interactive',
+    interactive: {
+      type: 'catalog_message',
+      body: { text: message },
+      action: {
+        name: 'catalog_message',
+        catalog_id: process.env.CATALOG_ID,
+      },
+    },
+  };
+
+  try {
+    const res = await fetch(WHATSAPP_API_URL, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${process.env.META_ACCESS_TOKEN}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+    logger.info(`Catalog template sent. Status: ${res.status}`);
+    if (!res.ok) {
+      const errText = await res.text();
+      logger.error(`Catalog error: ${errText}`);
+    }
+    return res;
+  } catch (err) {
+    logger.error(`Failed to send catalog: ${err.message}`);
+    throw err;
+  }
 }
 
 async function sendOrderConfirmation(to, orderId) {
   logger.info(`Sending order confirmation for ${orderId} to ${to}`);
+  const order = await redisState.getOrder(orderId);
+  if (!order) {
+    await sendTextMessage(to, `Order #${orderId} not found.`);
+    return;
+  }
+
+  let message =
+    `✅ *ORDER CONFIRMED*\n\n` +
+    `Order ID: #${order.order_id}\n` +
+    `Branch: ${order.branch}\n` +
+    `Payment Method: ${order.payment_method}\n\n` +
+    'ORDER ITEMS:\n';
+
+  for (const item of order.items) {
+    const itemTotal = item.price * item.quantity;
+    message += `• ${item.name} x${item.quantity} = ₹${itemTotal}\n`;
+  }
+
+  message += `\n*TOTAL*: ₹${Math.ceil(order.total)}\n\n`;
+  message += 'Your order will be processed shortly. Thank you for shopping with Kanuka Organics!';
+
+  await sendTextMessage(to, message);
 }
 
 async function sendMainMenu(to) {
-  await sendTextMessage(to, 'Welcome to Kanuka! Reply with "catalog" to browse.');
+  const message = 'Welcome to Kanuka Organics!';
+  const payload = {
+    messaging_product: 'whatsapp',
+    recipient_type: 'individual',
+    to,
+    type: 'interactive',
+    interactive: {
+      type: 'button',
+      body: { text: message },
+      action: {
+        buttons: [
+          {
+            type: 'reply',
+            reply: { id: 'ORDER_NOW', title: '🛍️ Order Now' },
+          },
+        ],
+      },
+    },
+  };
+
+  try {
+    const res = await fetch(WHATSAPP_API_URL, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${process.env.META_ACCESS_TOKEN}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+    logger.info(`Main menu sent. Status: ${res.status}`);
+    if (!res.ok) {
+      const errText = await res.text();
+      logger.error(`Main menu error: ${errText}`);
+    }
+    return res;
+  } catch (err) {
+    logger.error(`Failed to send main menu: ${err.message}`);
+    throw err;
+  }
 }
 
 async function sendCartSummary(to, cart) {

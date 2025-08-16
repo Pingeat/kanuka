@@ -34,6 +34,14 @@ async function handleText(sender, text, state) {
     return;
   }
 
+  const greetings = ['hi', 'hello', 'hey', 'hii', 'namaste'];
+  if (greetings.some((g) => text.includes(g))) {
+    await redisState.clearUserState(sender);
+    await sendMainMenu(sender);
+    await redisState.setUserState(sender, { step: STATES.MAIN_MENU });
+    return;
+  }
+
   if (text === 'menu') {
     await sendMainMenu(sender);
     await redisState.setUserState(sender, { step: STATES.MAIN_MENU });
@@ -70,6 +78,11 @@ async function handleListReply(sender, id) {
 
 async function handleButtonReply(sender, id, state) {
   switch (id) {
+    case 'ORDER_NOW': {
+      await sendCatalog(sender);
+      await redisState.setUserState(sender, { step: STATES.VIEWING_CATALOG });
+      break;
+    }
     case 'view_cart': {
       const cart = await redisState.getCart(sender);
       await sendCartSummary(sender, cart);

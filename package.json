@@ -1,0 +1,14 @@
+{
+  "name": "kanuka",
+  "version": "1.0.0",
+  "description": "Kanuka bot Node server",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs"
+}

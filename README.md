@@ -1,26 +1,43 @@
-"# kanuka" 
+# Kanuka
 
+## Setup on AWS
 
-#To install a bot in aws
-# Install Git
+### Install Git
+```bash
 sudo yum install git -y
+```
 
-# Verify installation
+### Verify installation
+```bash
 git --version
+```
 
-# Now you can clone the repository
+### Clone the repository
+```bash
 git clone https://github.com/Pingeat/TFC--Internal-bot.git
+```
 
-
-# First, install Python 3 and pip
+### Install Python 3 and pip
+```bash
 sudo yum install python3 python3-pip -y
-
-# Verify the installation
 python3 --version
 pip3 --version
+```
 
-# Now install your requirements using pip3
+### Install dependencies
+```bash
 pip3 install -r requirements.txt
+```
 
-# Install Redis
+### Install Redis
+```bash
 sudo dnf install redis6
+```
+
+## Node.js Rewrite (Work in Progress)
+A minimal Node.js server has been added and will gradually replace the Python backend.
+
+### Run
+```bash
+node server.js
+```

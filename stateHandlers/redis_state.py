@@ -9,6 +9,7 @@ from datetime import datetime, timedelta
 from utils.time_utils import get_current_ist
 
 logger = get_logger("redis_state")
+BRAND_ID = os.getenv("BRAND_ID", "default").lower()
 
 class RedisState:
     def __init__(self):
@@ -23,7 +24,7 @@ class RedisState:
     def get_user_state(self, user_id):
         """Get user state from Redis"""
         try:
-            state = self.redis.get(f"user:{user_id}:state")
+            state = self.redis.get(f"user:{BRAND_ID}:{user_id}:state")
             if state:
                 # Decode if state is bytes
                 if isinstance(state, bytes):
@@ -39,7 +40,11 @@ class RedisState:
         try:
             # Add timestamp for debugging
             state["last_updated"] = get_current_ist().strftime("%Y-%m-%d %H:%M:%S")
-            self.redis.setex(f"user:{user_id}:state", 3600, json.dumps(state))  # 1 hour expiry
+            self.redis.setex(
+                f"user:{BRAND_ID}:{user_id}:state",
+                3600,
+                json.dumps(state),
+            )  # 1 hour expiry
             logger.debug(f"Set user state for {user_id}: {state}")
             return True
         except Exception as e:
@@ -49,7 +54,7 @@ class RedisState:
     def clear_user_state(self, user_id):
         """Clear user state from Redis"""
         try:
-            self.redis.delete(f"user:{user_id}:state")
+            self.redis.delete(f"user:{BRAND_ID}:{user_id}:state")
             logger.debug(f"Cleared user state for {user_id}")
             return True
         except Exception as e:
@@ -59,7 +64,7 @@ class RedisState:
     def get_cart(self, user_id):
         """Get user's cart from Redis"""
         try:
-            cart = self.redis.get(f"user:{user_id}:cart")
+            cart = self.redis.get(f"user:{BRAND_ID}:{user_id}:cart")
             if cart:
                 # Decode if cart is bytes
                 if isinstance(cart, bytes):
@@ -109,7 +114,11 @@ class RedisState:
             cart["total"] = sum(item["quantity"] * item["price"] for item in cart["items"])
             
             # Set expiry to 24 hours
-            self.redis.setex(f"user:{user_id}:cart", 86400, json.dumps(cart))
+            self.redis.setex(
+                f"user:{BRAND_ID}:{user_id}:cart",
+                86400,
+                json.dumps(cart),
+            )
             logger.debug(f"Added {quantity}x {product['name']} (ID: {item_id}) to cart for {user_id}")
             return cart
         except Exception as e:
@@ -119,7 +128,7 @@ class RedisState:
     def clear_cart(self, user_id):
         """Clear user's cart"""
         try:
-            self.redis.delete(f"user:{user_id}:cart")
+            self.redis.delete(f"user:{BRAND_ID}:{user_id}:cart")
             logger.debug(f"Cleared cart for {user_id}")
             return True
         except Exception as e:
@@ -131,7 +140,11 @@ class RedisState:
         try:
             cart = self.get_cart(user_id)
             cart["branch"] = branch
-            self.redis.setex(f"user:{user_id}:cart", 86400, json.dumps(cart))
+            self.redis.setex(
+                f"user:{BRAND_ID}:{user_id}:cart",
+                86400,
+                json.dumps(cart),
+            )
             
             # Log branch selection
             logger.info(f"Branch set for {user_id}: {branch}")
@@ -145,7 +158,11 @@ class RedisState:
         try:
             cart = self.get_cart(user_id)
             cart["delivery_type"] = delivery_type
-            self.redis.setex(f"user:{user_id}:cart", 86400, json.dumps(cart))
+            self.redis.setex(
+                f"user:{BRAND_ID}:{user_id}:cart",
+                86400,
+                json.dumps(cart),
+            )
             
             # Log delivery type
             logger.info(f"Delivery type set for {user_id}: {delivery_type}")
@@ -159,7 +176,11 @@ class RedisState:
         try:
             cart = self.get_cart(user_id)
             cart["payment_method"] = payment_method
-            self.redis.setex(f"user:{user_id}:cart", 86400, json.dumps(cart))
+            self.redis.setex(
+                f"user:{BRAND_ID}:{user_id}:cart",
+                86400,
+                json.dumps(cart),
+            )
             
             # Log payment method
             logger.info(f"Payment method set for {user_id}: {payment_method}")
@@ -275,13 +296,15 @@ class RedisState:
             }
             
             # Add to reminders list
-            self.redis.rpush("cart:reminders", json.dumps(reminder_data))
-            
+            self.redis.rpush(
+                f"cart:{BRAND_ID}:reminders", json.dumps(reminder_data)
+            )
+
             # Set reminder time as key for easy retrieval
             self.redis.setex(
-                f"cart:reminder:{user_id}:{order_id}", 
-                int(delay_hours * 3600), 
-                "1"
+                f"cart:{BRAND_ID}:reminder:{user_id}:{order_id}",
+                int(delay_hours * 3600),
+                "1",
             )
             
             logger.info(f"Scheduled cart reminder for {user_id} (order {order_id}) in {delay_hours} hours")
@@ -294,7 +317,9 @@ class RedisState:
         """Get all pending cart reminders"""
         try:
             reminders = []
-            all_reminders = self.redis.lrange("cart:reminders", 0, -1)
+            all_reminders = self.redis.lrange(
+                f"cart:{BRAND_ID}:reminders", 0, -1
+            )
             
             for reminder_str in all_reminders:
                 # Decode if reminder_str is bytes
@@ -318,9 +343,13 @@ class RedisState:
             cart = self.get_cart(user_id)
             cart["location"] = {
                 "latitude": latitude,
-                "longitude": longitude
+                "longitude": longitude,
             }
-            self.redis.setex(f"user:{user_id}:cart", 86400, json.dumps(cart))
+            self.redis.setex(
+                f"user:{BRAND_ID}:{user_id}:cart",
+                86400,
+                json.dumps(cart),
+            )
             
             # Log location
             logger.info(f"Location coordinates set for {user_id}: {latitude}, {longitude}")
@@ -334,7 +363,11 @@ class RedisState:
         try:
             cart = self.get_cart(user_id)
             cart["delivery_address"] = address
-            self.redis.setex(f"user:{user_id}:cart", 86400, json.dumps(cart))
+            self.redis.setex(
+                f"user:{BRAND_ID}:{user_id}:cart",
+                86400,
+                json.dumps(cart),
+            )
             
             # Log address
             logger.info(f"Delivery address set for {user_id}")

@@ -3,7 +3,7 @@ const { REDIS_URL } = require('../config/redis');
 const { getLogger } = require('../utils/logger');
 
 const logger = getLogger('redis_state');
-const BRAND_ID = (process.env.BRAND_ID || 'default').toLowerCase();
+const DEFAULT_BRAND = (process.env.BRAND_ID || 'default').toLowerCase();
 
 class RedisState {
   constructor() {
@@ -11,9 +11,14 @@ class RedisState {
     this.redis.on('error', (err) => logger.error(`Redis error: ${err}`));
   }
 
-  async getUserState(userId) {
+  _brandKey(brandId) {
+    return (brandId || DEFAULT_BRAND).toLowerCase();
+  }
+
+  async getUserState(userId, brandId) {
+    const b = this._brandKey(brandId);
     try {
-      const data = await this.redis.get(`user:${BRAND_ID}:${userId}:state`);
+      const data = await this.redis.get(`user:${b}:${userId}:state`);
       return data ? JSON.parse(data) : null;
     } catch (err) {
       logger.error(`getUserState error: ${err}`);
@@ -21,11 +26,12 @@ class RedisState {
     }
   }
 
-  async setUserState(userId, state) {
+  async setUserState(userId, state, brandId) {
+    const b = this._brandKey(brandId);
     try {
       state.lastUpdated = new Date().toISOString();
       await this.redis.setex(
-        `user:${BRAND_ID}:${userId}:state`,
+        `user:${b}:${userId}:state`,
         3600,
         JSON.stringify(state)
       );
@@ -34,17 +40,19 @@ class RedisState {
     }
   }
 
-  async clearUserState(userId) {
+  async clearUserState(userId, brandId) {
+    const b = this._brandKey(brandId);
     try {
-      await this.redis.del(`user:${BRAND_ID}:${userId}:state`);
+      await this.redis.del(`user:${b}:${userId}:state`);
     } catch (err) {
       logger.error(`clearUserState error: ${err}`);
     }
   }
 
-  async getCart(userId) {
+  async getCart(userId, brandId) {
+    const b = this._brandKey(brandId);
     try {
-      const data = await this.redis.get(`user:${BRAND_ID}:${userId}:cart`);
+      const data = await this.redis.get(`user:${b}:${userId}:cart`);
       const cart = data ? JSON.parse(data) : { items: [], total: 0 };
       if (!cart.items) cart.items = [];
       if (typeof cart.total !== 'number') cart.total = 0;
@@ -55,66 +63,72 @@ class RedisState {
     }
   }
 
-  async addToCart(userId, item) {
+  async addToCart(userId, item, brandId) {
+    const b = this._brandKey(brandId);
     // item: { id, name, price, quantity }
-    const cart = await this.getCart(userId);
+    const cart = await this.getCart(userId, b);
     cart.items.push(item);
     cart.total = cart.items.reduce((sum, i) => sum + i.price * i.quantity, 0);
     cart.lastAdded = new Date().toISOString();
     cart.lastReminderDate = null;
     await this.redis.setex(
-      `user:${BRAND_ID}:${userId}:cart`,
+      `user:${b}:${userId}:cart`,
       86400,
       JSON.stringify(cart)
     );
-    await this.redis.sadd(`cart:${BRAND_ID}:users`, userId);
+    await this.redis.sadd(`cart:${b}:users`, userId);
     return cart;
   }
 
-  async clearCart(userId) {
+  async clearCart(userId, brandId) {
+    const b = this._brandKey(brandId);
     try {
-      await this.redis.del(`user:${BRAND_ID}:${userId}:cart`);
-      await this.redis.srem(`cart:${BRAND_ID}:users`, userId);
+      await this.redis.del(`user:${b}:${userId}:cart`);
+      await this.redis.srem(`cart:${b}:users`, userId);
     } catch (err) {
       logger.error(`clearCart error: ${err}`);
     }
   }
 
-  async setLocation(userId, latitude, longitude) {
-    const cart = await this.getCart(userId);
+  async setLocation(userId, latitude, longitude, brandId) {
+    const b = this._brandKey(brandId);
+    const cart = await this.getCart(userId, b);
     cart.location = { latitude, longitude };
     await this.redis.setex(
-      `user:${BRAND_ID}:${userId}:cart`,
+      `user:${b}:${userId}:cart`,
       86400,
       JSON.stringify(cart)
     );
   }
 
-  async setBranch(userId, branch) {
-    const cart = await this.getCart(userId);
+  async setBranch(userId, branch, brandId) {
+    const b = this._brandKey(brandId);
+    const cart = await this.getCart(userId, b);
     cart.branch = branch;
     await this.redis.setex(
-      `user:${BRAND_ID}:${userId}:cart`,
+      `user:${b}:${userId}:cart`,
       86400,
       JSON.stringify(cart)
     );
   }
 
-  async setPaymentMethod(userId, method) {
-    const cart = await this.getCart(userId);
+  async setPaymentMethod(userId, method, brandId) {
+    const b = this._brandKey(brandId);
+    const cart = await this.getCart(userId, b);
     cart.payment_method = method;
     await this.redis.setex(
-      `user:${BRAND_ID}:${userId}:cart`,
+      `user:${b}:${userId}:cart`,
       86400,
       JSON.stringify(cart)
     );
   }
 
-  async setAddress(userId, address) {
-    const cart = await this.getCart(userId);
+  async setAddress(userId, address, brandId) {
+    const b = this._brandKey(brandId);
+    const cart = await this.getCart(userId, b);
     cart.address = address;
     await this.redis.setex(
-      `user:${BRAND_ID}:${userId}:cart`,
+      `user:${b}:${userId}:cart`,
       86400,
       JSON.stringify(cart)
     );
@@ -176,20 +190,22 @@ class RedisState {
     return true;
   }
 
-  async getUsersWithCarts() {
+  async getUsersWithCarts(brandId) {
+    const b = this._brandKey(brandId);
     try {
-      return await this.redis.smembers(`cart:${BRAND_ID}:users`);
+      return await this.redis.smembers(`cart:${b}:users`);
     } catch (err) {
       logger.error(`getUsersWithCarts error: ${err}`);
       return [];
     }
   }
 
-  async markCartReminderSent(userId, dateStr) {
-    const cart = await this.getCart(userId);
+  async markCartReminderSent(userId, dateStr, brandId) {
+    const b = this._brandKey(brandId);
+    const cart = await this.getCart(userId, b);
     cart.lastReminderDate = dateStr;
     await this.redis.setex(
-      `user:${BRAND_ID}:${userId}:cart`,
+      `user:${b}:${userId}:cart`,
       86400,
       JSON.stringify(cart)
     );

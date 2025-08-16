@@ -32,22 +32,22 @@ async function handleText(sender, text, state, brandId) {
   logUserActivity(sender, 'message_received', text);
 
   if (state && state.step === STATES.ENTERING_ADDRESS) {
-    await redisState.setAddress(sender, text);
+    await redisState.setAddress(sender, text, brandId);
     await sendPaymentOptions(sender);
-    await redisState.setUserState(sender, { step: STATES.CHOOSING_PAYMENT });
+    await redisState.setUserState(sender, { step: STATES.CHOOSING_PAYMENT }, brandId);
     return;
   }
 
   if (state && state.step === STATES.SELECTING_DELIVERY) {
     const geo = await geocodeAddress(text);
     if (geo) {
-      await redisState.setLocation(sender, geo.latitude, geo.longitude);
+      await redisState.setLocation(sender, geo.latitude, geo.longitude, brandId);
       const { within, branch } = isWithinDeliveryRadius(
         geo.latitude,
         geo.longitude
       );
       if (within) {
-        await redisState.setBranch(sender, branch);
+        await redisState.setBranch(sender, branch, brandId);
         await sendTextMessage(
           sender,
           `🎉 Great news! You're near our ${branch} branch. Please send your address.`
@@ -55,7 +55,7 @@ async function handleText(sender, text, state, brandId) {
         await redisState.setUserState(sender, {
           step: STATES.ENTERING_ADDRESS,
           address: ''
-        });
+        }, brandId);
       } else {
         await sendTextMessage(
           sender,
@@ -70,22 +70,22 @@ async function handleText(sender, text, state, brandId) {
 
   const greetings = ['hi', 'hello', 'hey', 'hii', 'namaste'];
   if (greetings.some((g) => text.includes(g))) {
-    await redisState.clearUserState(sender);
+    await redisState.clearUserState(sender, brandId);
     await sendMainMenu(sender);
-    await redisState.setUserState(sender, { step: STATES.MAIN_MENU });
+    await redisState.setUserState(sender, { step: STATES.MAIN_MENU }, brandId);
     return;
   }
 
   if (text === 'menu') {
     await sendMainMenu(sender);
-    await redisState.setUserState(sender, { step: STATES.MAIN_MENU });
+    await redisState.setUserState(sender, { step: STATES.MAIN_MENU }, brandId);
   } else if (text === 'catalog') {
     await sendCatalog(sender);
-    await redisState.setUserState(sender, { step: STATES.VIEWING_CATALOG });
+    await redisState.setUserState(sender, { step: STATES.VIEWING_CATALOG }, brandId);
   } else if (text === 'cart') {
-    const cart = await redisState.getCart(sender);
+    const cart = await redisState.getCart(sender, brandId);
     await sendCartSummary(sender, cart);
-    await redisState.setUserState(sender, { step: STATES.VIEWING_CART });
+    await redisState.setUserState(sender, { step: STATES.VIEWING_CART }, brandId);
   } else if (/^set discount \d+/.test(text)) {
     const value = parseInt(text.split(' ')[2]);
     await redisState.setBrandDiscount(brandId, value);
@@ -105,23 +105,23 @@ async function handleText(sender, text, state, brandId) {
   }
 }
 
-async function handleListReply(sender, id) {
-  await redisState.setBranch(sender, id);
+async function handleListReply(sender, id, brandId) {
+  await redisState.setBranch(sender, id, brandId);
   await sendTextMessage(sender, `📍 Branch selected: ${id}`);
   await sendCatalog(sender);
-  await redisState.setUserState(sender, { step: STATES.VIEWING_CATALOG });
+  await redisState.setUserState(sender, { step: STATES.VIEWING_CATALOG }, brandId);
 }
 
 async function handleButtonReply(sender, id, state, brandId) {
   switch (id) {
     case 'ORDER_NOW': {
       await sendCatalog(sender);
-      await redisState.setUserState(sender, { step: STATES.VIEWING_CATALOG });
+      await redisState.setUserState(sender, { step: STATES.VIEWING_CATALOG }, brandId);
       break;
     }
     case 'CONTINUE_SHOPPING': {
       await sendCatalog(sender);
-      await redisState.setUserState(sender, { step: STATES.VIEWING_CATALOG });
+      await redisState.setUserState(sender, { step: STATES.VIEWING_CATALOG }, brandId);
       break;
     }
     case 'PROCEED_TO_CHECKOUT': {
@@ -133,14 +133,14 @@ async function handleButtonReply(sender, id, state, brandId) {
         );
       }
       await sendLocationRequest(sender);
-      await redisState.setUserState(sender, { step: STATES.SELECTING_DELIVERY });
+      await redisState.setUserState(sender, { step: STATES.SELECTING_DELIVERY }, brandId);
       break;
     }
     case 'CLEAR_CART': {
-      await redisState.clearCart(sender);
+      await redisState.clearCart(sender, brandId);
       await sendTextMessage(sender, '🗑️ Your cart has been cleared.');
       await sendCatalog(sender);
-      await redisState.setUserState(sender, { step: STATES.VIEWING_CATALOG });
+      await redisState.setUserState(sender, { step: STATES.VIEWING_CATALOG }, brandId);
       break;
     }
     case 'PAY_CASH': {
@@ -162,7 +162,7 @@ async function handleButtonReply(sender, id, state, brandId) {
   }
 }
 
-async function handleCatalogSelection(sender, productId) {
+async function handleCatalogSelection(sender, productId, brandId) {
   // Normalize product id to lowercase for lookup to handle case variations
   const key = String(productId).toLowerCase();
   const product = PRODUCT_CATALOG[key];
@@ -175,10 +175,10 @@ async function handleCatalogSelection(sender, productId) {
     name: product.name,
     price: product.price,
     quantity: 1
-  });
-  const cart = await redisState.getCart(sender);
+  }, brandId);
+  const cart = await redisState.getCart(sender, brandId);
   await sendCartSummary(sender, cart);
-  await redisState.setUserState(sender, { step: STATES.VIEWING_CART });
+  await redisState.setUserState(sender, { step: STATES.VIEWING_CART }, brandId);
 }
 
 async function handleIncomingMessage(data) {
@@ -201,16 +201,16 @@ async function handleIncomingMessage(data) {
         } = getBrandInfoByPhoneId(metadata.phone_number_id);
         setBrandContext(brandConfig, phoneNumberId, catalogId, accessToken);
         setBrandCatalog(brandConfig);
-        const state = (await redisState.getUserState(sender)) || {};
+        const state = (await redisState.getUserState(sender, brandId)) || {};
 
         if (type === 'interactive') {
           const iType = msg.interactive.type;
           if (iType === 'list_reply') {
-            await handleListReply(sender, msg.interactive.list_reply.id, state);
+            await handleListReply(sender, msg.interactive.list_reply.id, brandId);
           } else if (iType === 'button_reply') {
             await handleButtonReply(sender, msg.interactive.button_reply.id, state, brandId);
           } else if (iType === 'catalog_message') {
-            await handleCatalogSelection(sender, msg.interactive.catalog_message.product_retailer_id);
+            await handleCatalogSelection(sender, msg.interactive.catalog_message.product_retailer_id, brandId);
           }
         } else if (type === 'text') {
           const text = msg.text.body.trim().toLowerCase();
@@ -218,19 +218,19 @@ async function handleIncomingMessage(data) {
         } else if (type === 'order') {
           const items = msg.order.product_items || [];
           for (const item of items) {
-            await handleCatalogSelection(sender, item.product_retailer_id);
+            await handleCatalogSelection(sender, item.product_retailer_id, brandId);
           }
         } else if (type === 'location') {
           const { latitude, longitude } = msg.location;
-          await redisState.setLocation(sender, latitude, longitude);
+          await redisState.setLocation(sender, latitude, longitude, brandId);
           const { within, branch } = isWithinDeliveryRadius(latitude, longitude);
           if (within) {
-            await redisState.setBranch(sender, branch);
+            await redisState.setBranch(sender, branch, brandId);
             await sendTextMessage(
               sender,
               `🎉 Great news! You're near our ${branch} branch. Please send your address.`
             );
-            await redisState.setUserState(sender, { step: STATES.ENTERING_ADDRESS, address: '' });
+            await redisState.setUserState(sender, { step: STATES.ENTERING_ADDRESS, address: '' }, brandId);
           } else {
             await sendTextMessage(sender, '🚫 Sorry, we do not deliver to your location.');
           }

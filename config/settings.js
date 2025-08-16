@@ -26,4 +26,22 @@ const PRODUCT_CATALOG = {
   hkaqqb8sec: { name: 'Palm Jaggery - cubes(500gms)', price: 550 }
 };
 
-module.exports = { BRANCH_COORDINATES, DELIVERY_RADIUS_KM, ORDER_STATUS, PRODUCT_CATALOG };
+const BRANCH_CONTACTS = {
+  Kondapur: ['916302588275'],
+  Madhapur: ['917075442898'],
+  Manikonda: ['919392016847'],
+  Nizampet: ['916303241076'],
+  Nanakramguda: ['916303237242'],
+  'West Maredpally': ['919032366276']
+};
+
+const OTHER_NUMBERS = ['9640112005', '9226454238', '8074301029'];
+
+module.exports = {
+  BRANCH_COORDINATES,
+  DELIVERY_RADIUS_KM,
+  ORDER_STATUS,
+  PRODUCT_CATALOG,
+  BRANCH_CONTACTS,
+  OTHER_NUMBERS
+};

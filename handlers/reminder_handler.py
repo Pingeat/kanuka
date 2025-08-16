@@ -58,6 +58,6 @@ def schedule_daily_tasks():
 
 def start_scheduler():
     """Start the scheduler in a separate thread"""
-    # scheduler_thread = threading.Thread(target=schedule_daily_tasks, daemon=True)
-    # scheduler_thread.start()
+    scheduler_thread = threading.Thread(target=schedule_daily_tasks, daemon=True)
+    scheduler_thread.start()
     logger.info("Scheduler started")

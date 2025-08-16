@@ -1,6 +1,7 @@
 const { BRANCH_COORDINATES, DELIVERY_RADIUS_KM, ORDER_STATUS, PRODUCT_CATALOG } = require('../config/settings');
 const redisState = require('../stateHandlers/redisState');
 const { getLogger } = require('../utils/logger');
+const { generateRazorpayLink } = require('../utils/paymentUtils');
 const logger = getLogger('order_service');
 
 function generateOrderId() {
@@ -48,21 +49,43 @@ async function placeOrder(userId, deliveryType, address = null, paymentMethod = 
   if (!cart.items.length) {
     return { success: false, message: 'Cart is empty' };
   }
+
+  if (deliveryType === 'Delivery' && cart.location) {
+    const { within, branch } = isWithinDeliveryRadius(cart.location.latitude, cart.location.longitude);
+    if (!within) {
+      return { success: false, message: 'Outside delivery radius' };
+    }
+    cart.branch = branch;
+  }
+
+  // apply global discount if any
+  const discount = await redisState.getGlobalDiscount();
+  let total = cart.items.reduce((sum, i) => sum + i.price * i.quantity, 0);
+  if (discount) {
+    total = total - (total * discount) / 100;
+  }
+
   const orderId = generateOrderId();
   const order = {
     order_id: orderId,
     user_id: userId,
     items: cart.items,
-    total: cart.total,
+    total,
     status: paymentMethod === 'Cash on Delivery' ? ORDER_STATUS.PAID : ORDER_STATUS.PENDING,
     delivery_type: deliveryType,
-    delivery_address: address,
+    delivery_address: address || cart.address,
     payment_method: paymentMethod,
+    branch: cart.branch,
     order_date: new Date().toISOString()
   };
+
+  if (paymentMethod !== 'Cash on Delivery') {
+    order.payment_link = generateRazorpayLink(total, orderId);
+  }
+
   await redisState.createOrder(order);
   await redisState.clearCart(userId);
-  return { success: true, order_id: orderId };
+  return { success: true, order_id: orderId, payment_link: order.payment_link };
 }
 
 async function processPayment(userId, orderId) {
@@ -86,9 +109,11 @@ async function updateOrderStatusFromCommand(command) {
 
 async function confirmOrder(whatsappNumber, orderId, paymentMethod) {
   logger.info(`Confirming order ${orderId} for ${whatsappNumber}`);
-  // Lookup pending order if needed and finalize
-  const success = true; // placeholder
-  return { success };
+  const order = await redisState.getOrder(orderId);
+  if (!order) return { success: false };
+  order.status = ORDER_STATUS.DELIVERED;
+  await redisState.archiveOrder(order);
+  return { success: true };
 }
 
 module.exports = {

@@ -49,7 +49,13 @@ function isWithinDeliveryRadius(lat, lon) {
   return { within: distance <= DELIVERY_RADIUS_KM, branch, distance };
 }
 
-async function placeOrder(userId, deliveryType, address = null, paymentMethod = 'Cash on Delivery') {
+async function placeOrder(
+  userId,
+  deliveryType,
+  address = null,
+  paymentMethod = 'Cash on Delivery',
+  brandId
+) {
   const cart = await redisState.getCart(userId);
   if (!cart.items.length) {
     return { success: false, message: 'Cart is empty' };
@@ -63,7 +69,7 @@ async function placeOrder(userId, deliveryType, address = null, paymentMethod = 
     cart.branch = branch;
   }
 
-  const discount = await redisState.getGlobalDiscount();
+  const discount = brandId ? await redisState.getBrandDiscount(brandId) : null;
   const actualTotal = cart.items.reduce(
     (sum, i) => sum + i.price * i.quantity,
     0

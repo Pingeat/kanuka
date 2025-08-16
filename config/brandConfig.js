@@ -20,6 +20,7 @@ function getBrandInfoByPhoneId(phoneNumberId) {
   const accessToken = process.env[entry.access_token_env] || entry.access_token_env;
   return {
     brandConfig,
+    brandId: entry.brand_id,
     phoneNumberId,
     catalogId,
     accessToken

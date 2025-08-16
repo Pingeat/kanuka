@@ -1,6 +1,7 @@
 # stateHandlers/redis_state.py
 import redis
 import json
+import os
 from config.credentials import REDIS_URL
 from utils.logger import get_logger
 from datetime import datetime, timedelta
@@ -371,44 +372,44 @@ class RedisState:
                 "maps_link": None
             }
     
-    def set_global_discount(self, discount_percentage):
-        """Set global discount percentage (0-100)"""
+    def set_brand_discount(self, discount_percentage, brand_id=None):
+        """Set brand-specific discount percentage (0-100)"""
         try:
-            # Validate discount percentage
             discount_percentage = float(discount_percentage)
             if not (0 <= discount_percentage <= 100):
                 logger.error("Discount percentage must be between 0 and 100")
                 return False
-
-            self.redis.set("global:discount", str(discount_percentage))
-            logger.info(f"Global discount set to {discount_percentage}%")
+            brand = brand_id or os.getenv("BRAND_ID", "default")
+            self.redis.set(f"brand:{brand}:discount", str(discount_percentage))
+            logger.info(f"Discount for {brand} set to {discount_percentage}%")
             return True
         except Exception as e:
-            logger.error(f"Error setting global discount: {str(e)}")
+            logger.error(f"Error setting discount: {str(e)}")
             return False
 
-    def get_global_discount(self):
-        """Get global discount percentage"""
+    def get_brand_discount(self, brand_id=None):
+        """Get brand-specific discount percentage"""
         try:
-            discount = self.redis.get("global:discount")
+            brand = brand_id or os.getenv("BRAND_ID", "default")
+            discount = self.redis.get(f"brand:{brand}:discount")
             if discount:
-                # Decode if discount is bytes
                 if isinstance(discount, bytes):
                     discount = discount.decode('utf-8')
                 return float(discount)
-            return 0.0  # Default to 0% discount
-        except Exception as e:
-            logger.error(f"Error getting global discount: {str(e)}")
             return 0.0
-    
-    def clear_global_discount(self):
-        """Clear global discount (set to 0%)"""
+        except Exception as e:
+            logger.error(f"Error getting discount: {str(e)}")
+            return 0.0
+
+    def clear_brand_discount(self, brand_id=None):
+        """Clear brand discount (set to 0%)"""
         try:
-            self.redis.delete("global:discount")
-            logger.info("Global discount cleared")
+            brand = brand_id or os.getenv("BRAND_ID", "default")
+            self.redis.delete(f"brand:{brand}:discount")
+            logger.info("Brand discount cleared")
             return True
         except Exception as e:
-            logger.error(f"Error clearing global discount: {str(e)}")
+            logger.error(f"Error clearing brand discount: {str(e)}")
             return False
 
 # Initialize Redis state handler

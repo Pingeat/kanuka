@@ -1,6 +1,13 @@
 const crypto = require('crypto');
+const fs = require('fs');
+const path = require('path');
 const { confirmOrder } = require('../services/orderService');
-const { sendTextMessage } = require('../services/whatsappService');
+const {
+  sendTextMessage,
+  setBrandContext
+} = require('../services/whatsappService');
+const { loadBrandConfig } = require('../services/brandService');
+const { setBrandCatalog } = require('../config/settings');
 const { getLogger } = require('../utils/logger');
 
 const logger = getLogger('payment_webhook');
@@ -13,14 +20,35 @@ function verifySignature(rawBody, signature, secret) {
   return expected === signature;
 }
 
+function getBrandIdFromSignature(rawBody, signature) {
+  const brandsDir = path.join(__dirname, '..', 'config', 'brands');
+  const files = fs.readdirSync(brandsDir);
+  for (const file of files) {
+    const brandId = path.basename(file, '.json');
+    const secret = process.env[`RAZORPAY_WEBHOOK_SECRET_${brandId.toUpperCase()}`];
+    if (secret && verifySignature(rawBody, signature, secret)) {
+      return brandId;
+    }
+  }
+  return null;
+}
+
 async function handlePaymentWebhook(req, res) {
   const signature = req.get('X-Razorpay-Signature');
-  const secret = process.env.RAZORPAY_WEBHOOK_SECRET;
-  if (!signature || !secret || !verifySignature(req.rawBody, signature, secret)) {
+  const brandId = signature ? getBrandIdFromSignature(req.rawBody, signature) : null;
+  if (!brandId) {
     logger.warn('Invalid Razorpay signature');
     res.status(400).send('Invalid signature');
     return;
   }
+
+  const brandConfig = loadBrandConfig(brandId) || {};
+  const upper = brandId.toUpperCase();
+  const phoneId = process.env[`META_PHONE_NUMBER_ID_${upper}`];
+  const catalogId = process.env[`CATALOG_ID_${upper}`];
+  const accessToken = process.env[`META_ACCESS_TOKEN_${upper}`];
+  setBrandContext(brandConfig, phoneId, catalogId, accessToken);
+  setBrandCatalog(brandConfig);
 
   const data = req.body || {};
   if (data.event === 'payment_link.paid') {
@@ -44,4 +72,4 @@ async function handlePaymentWebhook(req, res) {
   res.send('OK');
 }
 
-module.exports = { handlePaymentWebhook };
+module.exports = { handlePaymentWebhook, getBrandIdFromSignature };

@@ -9,18 +9,27 @@
     {
       "id": "6xpxtkaoau",
       "name": "Palm Jaggery - Powdered (700gms)",
-      "price": 760.00,
-      "original_price": 910.00,
-      "category": "Jaggery Products",
-      "description": "Premium quality palm jaggery in powdered form"
+      "price": 760.00
     },
     {
       "id": "kyygkhdlxf",
       "name": "Palm Jaggery - Cubes (1 KG)",
-      "price": 1100.00,
-      "original_price": 1300.00,
-      "category": "Jaggery Products",
-      "description": "Premium quality palm jaggery in cube form"
+      "price": 1100.00
+    },
+    {
+      "id": "1ado92c3xm",
+      "name": "Palm Jaggery - Powdered(1 KG)",
+      "price": 1100.00
+    },
+    {
+      "id": "36dlxrjdjq",
+      "name": "Palm Jaggery - Powdered(500gms)",
+      "price": 550.00
+    },
+    {
+      "id": "hkaqqb8sec",
+      "name": "Palm Jaggery - cubes(500gms)",
+      "price": 550.00
     }
   ]
 }

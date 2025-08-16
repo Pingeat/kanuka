@@ -7,20 +7,29 @@
   },
   "catalog": [
     {
-      "id": "6xpxtkaoau",
-      "name": "Palm Jaggery - Powdered (700gms)",
-      "price": 760.0,
-      "original_price": 910.0,
-      "category": "Jaggery Products",
-      "description": "Premium quality palm jaggery in powdered form"
+      "id": "w4w37b2azl",
+      "name": "Milkshake",
+      "price": 100
     },
     {
-      "id": "kyygkhdlxf",
-      "name": "Palm Jaggery - Cubes (1 KG)",
-      "price": 1100.0,
-      "original_price": 1300.0,
-      "category": "Jaggery Products",
-      "description": "Premium quality palm jaggery in cube form"
+      "id": "t0xsjnaunp",
+      "name": "Rasmalai Milkshake",
+      "price": 60
+    },
+    {
+      "id": "ft1y7tr0ly",
+      "name": "Kheer Milkshake",
+      "price": 60
+    },
+    {
+      "id": "4aa8se1b5w",
+      "name": "Chocolate Milkshake",
+      "price": 600
+    },
+    {
+      "id": "95uqsrewl9",
+      "name": "Filter Kaapi",
+      "price": 60
     }
   ]
 }

@@ -16,8 +16,8 @@ function getBrandInfoByPhoneId(phoneNumberId) {
     throw new Error(`No brand configured for phone_number_id ${phoneNumberId}`);
   }
   const brandConfig = loadBrand(entry.brand_id);
-  const catalogId = process.env[entry.catalog_id_env];
-  const accessToken = process.env[entry.access_token_env];
+  const catalogId = process.env[entry.catalog_id_env] || entry.catalog_id_env;
+  const accessToken = process.env[entry.access_token_env] || entry.access_token_env;
   return {
     brandConfig,
     phoneNumberId,

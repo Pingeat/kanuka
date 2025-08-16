@@ -405,12 +405,12 @@ def handle_catalog_selection(sender, product_retailer_id, current_state):
         redis_state.set_user_state(sender, {"step": "VIEWING_CATALOG"})
         return
     
-    # Get product info from catalog mapping
-    product_info = PRODUCT_CATALOG.get(product_retailer_id)
+    # Get product info from catalog mapping (case-insensitive lookup)
+    product_info = PRODUCT_CATALOG.get(str(product_retailer_id).lower())
     
     if product_info:
         # Add to cart (quantity 1 by default)
-        cart = redis_state.add_to_cart(sender, product_retailer_id, 1)
+        cart = redis_state.add_to_cart(sender, str(product_retailer_id).lower(), 1)
         
         # Send cart summary
         send_cart_summary(sender)
@@ -437,12 +437,12 @@ def handle_catalog_order(sender, items):
     
     # Add catalog items to cart
     for item in items:
-        product_id = item.get("product_retailer_id", "")
+        product_id = str(item.get("product_retailer_id", "")).lower()
         quantity = int(item.get("quantity", 1))
-        
+
         # Get product info from catalog mapping
         product_info = PRODUCT_CATALOG.get(product_id)
-        
+
         if product_info:
             # Add to cart
             redis_state.add_to_cart(sender, product_id, quantity)

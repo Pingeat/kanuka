@@ -11,7 +11,7 @@ corresponding `catalog_id` required by the Meta API.
 
 Two sample brands are included:
 
-- `kanuka_organics` mapped to `phone_number_id` `747499348442635`
+- `kanuka` mapped to `phone_number_id` `747499348442635`
 - `zumi` mapped to `phone_number_id` `9876543210`
 
 ## Setup on AWS

@@ -43,7 +43,7 @@ GREETING_MESSAGE = (
 
 # WhatsApp Catalog product ID to name mapping
 PRODUCT_CATALOG = {
-    item["id"]: {"name": item["name"], "price": item["price"]}
+    str(item["id"]).lower(): {"name": item["name"], "price": item["price"]}
     for item in brand_config.get("catalog", [])
 }
 

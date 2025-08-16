@@ -5,14 +5,19 @@ const redisState = require('../stateHandlers/redisState');
 
 const logger = getLogger('whatsapp_service');
 
-// Construct the WhatsApp API URL from the phone number ID to avoid relying on
-// string interpolation inside environment files which aren't parsed by
-// `dotenv`.
-const phoneNumberId = process.env.META_PHONE_NUMBER_ID;
-if (!phoneNumberId) {
-  logger.error('META_PHONE_NUMBER_ID is not defined');
+let brandConfig = { name: 'Kanuka Organics', catalog: [] };
+let phoneNumberId = process.env.META_PHONE_NUMBER_ID;
+let catalogId = process.env.CATALOG_ID;
+let WHATSAPP_API_URL = phoneNumberId
+  ? `https://graph.facebook.com/v23.0/${phoneNumberId}/messages`
+  : null;
+
+function setBrandContext(config, phoneId, catId) {
+  brandConfig = config || brandConfig;
+  phoneNumberId = phoneId || phoneNumberId;
+  catalogId = catId || catalogId;
+  WHATSAPP_API_URL = `https://graph.facebook.com/v23.0/${phoneNumberId}/messages`;
 }
-const WHATSAPP_API_URL = `https://graph.facebook.com/v23.0/${phoneNumberId}/messages`;
 
 async function sendTextMessage(to, message) {
   logger.info(`Sending message to ${to}`);
@@ -61,7 +66,7 @@ async function sendCatalog(to) {
       body: { text: message },
       action: {
         name: 'catalog_message',
-        catalog_id: process.env.CATALOG_ID,
+        catalog_id: catalogId,
       },
     },
   };
@@ -115,13 +120,13 @@ async function sendOrderConfirmation(to, orderId) {
       )}\n`;
   }
   message += `\n*TOTAL PAYABLE*: ₹${Math.ceil(order.total)}\n\n`;
-  message += '🙏 Thanks for shopping with Kanuka Organics!';
+  message += `🙏 Thanks for shopping with ${brandConfig.name}!`;
 
   await sendTextMessage(to, message);
 }
 
 async function sendMainMenu(to) {
-  const message = '🌿 Welcome to *Kanuka Organics*! 🌿\nHow can we assist you today?';
+  const message = `🌿 Welcome to *${brandConfig.name}*! 🌿\nHow can we assist you today?`;
   const payload = {
     messaging_product: 'whatsapp',
     recipient_type: 'individual',
@@ -443,5 +448,6 @@ module.exports = {
   sendBranchSelection,
   sendPaymentLink,
   sendOrderAlert,
-  sendOrderStatusUpdate
+  sendOrderStatusUpdate,
+  setBrandContext
 };

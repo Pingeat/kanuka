@@ -30,12 +30,25 @@
 
 # config/settings.py
 
-# Brand configuration
-BRAND_NAME = "Kanuka Organics"
-GREETING_MESSAGE = "🌿 *Welcome to Kanuka Organics*\n\n" \
-                  "Your one-stop shop for premium organic products!\n\n" \
-                  "How can we help you today?"
 
+from .brand_config import brand_config
+
+# Brand configuration
+BRAND_NAME = brand_config.get("name", "Our Store")
+GREETING_MESSAGE = (
+    f"🌿 *Welcome to {BRAND_NAME}*\\n\\n"
+    "Your one-stop shop for premium organic products!\\n\\n"
+    "How can we help you today?"
+)
+
+# WhatsApp Catalog product ID to name mapping
+PRODUCT_CATALOG = {
+    item["id"]: {"name": item["name"], "price": item["price"]}
+    for item in brand_config.get("catalog", [])
+}
+
+# Bulk order contact information
+BULK_ORDER_CONTACT = brand_config.get("bulk_contact", {})
 # Branch contacts (for order notifications)
 BRANCH_CONTACTS = {
     "Kondapur": ["916302588275"],
@@ -90,20 +103,6 @@ ORDER_STATUS = {
 # Payment methods
 PAYMENT_METHODS = ["Pay Now", "Cash on Delivery"]
 
-# WhatsApp Catalog product ID to name mapping
-PRODUCT_CATALOG = {
-    "6xpxtkaoau": {"name": "Palm Jaggery - Powdered(700gms)", "price": 760},
-    "kyygkhdlxf": {"name": "Palm Jaggery - cubes(1 KG)","price": 1100},
-    "1ado92c3xm": {"name": "Palm Jaggery - Powdered(1 KG)", "price": 1100},
-    "36dlxrjdjq": {"name": "Palm Jaggery - Powdered(500gms)", "price": 550},
-    "hkaqqb8sec": {"name": "Palm Jaggery - cubes(500gms)", "price": 550},
-}
-
-# Bulk order contact information
-BULK_ORDER_CONTACT = {
-    "phone": "919876543210",
-    "email": "bulk@kanukaorganics.com"
-}
 
 
 ADMIN_NUMBERS = ["918074301029","919640112005"]

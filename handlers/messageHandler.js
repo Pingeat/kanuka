@@ -8,12 +8,14 @@ const {
   sendPaymentOptions,
   sendLocationRequest,
   sendBranchSelection,
-  sendPaymentLink
+  sendPaymentLink,
+  setBrandContext
 } = require('../services/whatsappService');
 const { placeOrder, isWithinDeliveryRadius, updateOrderStatusFromCommand } = require('../services/orderService');
 const { geocodeAddress } = require('../utils/geocode');
 const { logUserActivity } = require('../utils/csvLogger');
-const { PRODUCT_CATALOG, BRANCH_COORDINATES } = require('../config/settings');
+const { PRODUCT_CATALOG, BRANCH_COORDINATES, setBrandCatalog } = require('../config/settings');
+const { getBrandInfoByPhoneId } = require('../config/brandConfig');
 const { getLogger } = require('../utils/logger');
 const logger = getLogger('message_handler');
 
@@ -187,6 +189,12 @@ async function handleIncomingMessage(data) {
         const msg = messages[0];
         const sender = msg.from;
         const type = msg.type;
+        const metadata = value.metadata || {};
+        const { brandConfig, phoneNumberId, catalogId } = getBrandInfoByPhoneId(
+          metadata.phone_number_id
+        );
+        setBrandContext(brandConfig, phoneNumberId, catalogId);
+        setBrandCatalog(brandConfig);
         const state = (await redisState.getUserState(sender)) || {};
 
         if (type === 'interactive') {

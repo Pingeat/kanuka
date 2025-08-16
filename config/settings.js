@@ -18,13 +18,16 @@ const ORDER_STATUS = {
   CANCELLED: 'Cancelled'
 };
 
-const PRODUCT_CATALOG = {
-  '6xpxtkaoau': { name: 'Palm Jaggery - Powdered(700gms)', price: 760 },
-  'kyygkhdlxf': { name: 'Palm Jaggery - cubes(1 KG)', price: 1100 },
-  '1ado92c3xm': { name: 'Palm Jaggery - Powdered(1 KG)', price: 1100 },
-  '36dlxrjdjq': { name: 'Palm Jaggery - Powdered(500gms)', price: 550 },
-  hkaqqb8sec: { name: 'Palm Jaggery - cubes(500gms)', price: 550 }
-};
+const PRODUCT_CATALOG = {};
+
+function setBrandCatalog(brandConfig) {
+  for (const key of Object.keys(PRODUCT_CATALOG)) {
+    delete PRODUCT_CATALOG[key];
+  }
+  for (const item of brandConfig.catalog || []) {
+    PRODUCT_CATALOG[item.id] = { name: item.name, price: item.price };
+  }
+}
 
 const BRANCH_CONTACTS = {
   Kondapur: ['916302588275'],
@@ -42,6 +45,7 @@ module.exports = {
   DELIVERY_RADIUS_KM,
   ORDER_STATUS,
   PRODUCT_CATALOG,
+  setBrandCatalog,
   BRANCH_CONTACTS,
   OTHER_NUMBERS
 };

@@ -92,7 +92,7 @@ async function placeOrder(userId, deliveryType, address = null, paymentMethod = 
   };
 
   if (paymentMethod !== 'Cash on Delivery') {
-    order.payment_link = await generateRazorpayLink(total, orderId);
+    order.payment_link = await generateRazorpayLink(total, orderId, userId);
   }
 
   await redisState.createOrder(order);
@@ -127,7 +127,7 @@ async function processPayment(userId, orderId) {
     return { success: false, message: 'Order not found' };
   }
   try {
-    const link = await generateRazorpayLink(order.total, orderId);
+    const link = await generateRazorpayLink(order.total, orderId, userId);
     order.payment_link = link;
     return { success: true, payment_link: link };
   } catch (err) {

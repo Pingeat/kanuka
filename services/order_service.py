@@ -73,8 +73,8 @@ def process_payment(user_id, order_id):
      # Get cart
     cart = redis_state.get_cart(user_id)
     
-     # Get global discount
-    discount_percentage = redis_state.get_global_discount()
+     # Get brand-specific discount
+    discount_percentage = redis_state.get_brand_discount()
     
       # Calculate original total
     original_total = cart["total"]
@@ -228,9 +228,9 @@ def place_order(user_id, delivery_type, address=None, payment_method="Cash on De
         logger.warning(f"Cart is empty for user {user_id}")
         return False, "Your cart is empty. Please add items before placing an order."
     
-     # Get global discount
-    discount_percentage = redis_state.get_global_discount()
-    logger.info(f"Applying global discount of {discount_percentage}% to order for {user_id}")
+     # Get brand-specific discount
+    discount_percentage = redis_state.get_brand_discount()
+    logger.info(f"Applying discount of {discount_percentage}% to order for {user_id}")
     
     # Generate order ID
     order_id = generate_order_id()

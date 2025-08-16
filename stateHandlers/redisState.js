@@ -95,29 +95,29 @@ class RedisState {
     await this.redis.setex(`user:${userId}:cart`, 86400, JSON.stringify(cart));
   }
 
-  async setGlobalDiscount(percent) {
+  async setBrandDiscount(brandId, percent) {
     try {
-      await this.redis.set('global:discount', percent);
+      await this.redis.set(`brand:${brandId}:discount`, percent);
     } catch (err) {
-      logger.error(`setGlobalDiscount error: ${err}`);
+      logger.error(`setBrandDiscount error: ${err}`);
     }
   }
 
-  async getGlobalDiscount() {
+  async getBrandDiscount(brandId) {
     try {
-      const val = await this.redis.get('global:discount');
+      const val = await this.redis.get(`brand:${brandId}:discount`);
       return val ? parseFloat(val) : null;
     } catch (err) {
-      logger.error(`getGlobalDiscount error: ${err}`);
+      logger.error(`getBrandDiscount error: ${err}`);
       return null;
     }
   }
 
-  async clearGlobalDiscount() {
+  async clearBrandDiscount(brandId) {
     try {
-      await this.redis.del('global:discount');
+      await this.redis.del(`brand:${brandId}:discount`);
     } catch (err) {
-      logger.error(`clearGlobalDiscount error: ${err}`);
+      logger.error(`clearBrandDiscount error: ${err}`);
     }
   }
 

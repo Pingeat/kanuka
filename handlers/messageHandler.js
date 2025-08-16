@@ -28,7 +28,7 @@ const STATES = {
   CHOOSING_PAYMENT: 'CHOOSING_PAYMENT'
 };
 
-async function handleText(sender, text, state) {
+async function handleText(sender, text, state, brandId) {
   logUserActivity(sender, 'message_received', text);
 
   if (state && state.step === STATES.ENTERING_ADDRESS) {
@@ -88,10 +88,10 @@ async function handleText(sender, text, state) {
     await redisState.setUserState(sender, { step: STATES.VIEWING_CART });
   } else if (/^set discount \d+/.test(text)) {
     const value = parseInt(text.split(' ')[2]);
-    await redisState.setGlobalDiscount(value);
+    await redisState.setBrandDiscount(brandId, value);
     await sendTextMessage(sender, `🎯 Discount set to ${value}%!`);
   } else if (text === 'clear discount') {
-    await redisState.clearGlobalDiscount();
+    await redisState.clearBrandDiscount(brandId);
     await sendTextMessage(sender, '✅ Discount cleared');
   } else {
     const res = await updateOrderStatusFromCommand(text);
@@ -112,7 +112,7 @@ async function handleListReply(sender, id) {
   await redisState.setUserState(sender, { step: STATES.VIEWING_CATALOG });
 }
 
-async function handleButtonReply(sender, id, state) {
+async function handleButtonReply(sender, id, state, brandId) {
   switch (id) {
     case 'ORDER_NOW': {
       await sendCatalog(sender);
@@ -125,7 +125,7 @@ async function handleButtonReply(sender, id, state) {
       break;
     }
     case 'PROCEED_TO_CHECKOUT': {
-      const discount = await redisState.getGlobalDiscount();
+      const discount = await redisState.getBrandDiscount(brandId);
       if (discount) {
         await sendTextMessage(
           sender,
@@ -144,14 +144,14 @@ async function handleButtonReply(sender, id, state) {
       break;
     }
     case 'PAY_CASH': {
-      const result = await placeOrder(sender, 'Delivery', state.address, 'Cash on Delivery');
+      const result = await placeOrder(sender, 'Delivery', state.address, 'Cash on Delivery', brandId);
       if (result.success) {
         await sendOrderConfirmation(sender, result.order_id);
       }
       break;
     }
     case 'PAY_ONLINE': {
-      const result = await placeOrder(sender, 'Delivery', state.address, 'Online');
+      const result = await placeOrder(sender, 'Delivery', state.address, 'Online', brandId);
       if (result.success && result.payment_link) {
         await sendPaymentLink(sender, result.payment_link);
       }
@@ -194,6 +194,7 @@ async function handleIncomingMessage(data) {
         const metadata = value.metadata || {};
         const {
           brandConfig,
+          brandId,
           phoneNumberId,
           catalogId,
           accessToken,
@@ -207,13 +208,13 @@ async function handleIncomingMessage(data) {
           if (iType === 'list_reply') {
             await handleListReply(sender, msg.interactive.list_reply.id, state);
           } else if (iType === 'button_reply') {
-            await handleButtonReply(sender, msg.interactive.button_reply.id, state);
+            await handleButtonReply(sender, msg.interactive.button_reply.id, state, brandId);
           } else if (iType === 'catalog_message') {
             await handleCatalogSelection(sender, msg.interactive.catalog_message.product_retailer_id);
           }
         } else if (type === 'text') {
           const text = msg.text.body.trim().toLowerCase();
-          await handleText(sender, text, state);
+          await handleText(sender, text, state, brandId);
         } else if (type === 'order') {
           const items = msg.order.product_items || [];
           for (const item of items) {

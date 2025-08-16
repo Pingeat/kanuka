@@ -238,9 +238,9 @@ def handle_location_by_text(sender, text):
         send_text_message(sender, message)
 
 def send_discount(sender):
-     # Get global discount
-    discount_percentage = redis_state.get_global_discount()
-    logger.info(f"Applying global discount of {discount_percentage:.2f}% to order for {sender}")
+     # Get brand-specific discount
+    discount_percentage = redis_state.get_brand_discount()
+    logger.info(f"Applying brand discount of {discount_percentage:.2f}% to order for {sender}")
     if discount_percentage > 0:
         send_text_message(sender, f"🎉 Congratulations! You've unlocked a {discount_percentage:.2f}% discount.")
 
@@ -254,11 +254,11 @@ def handle_text_message(sender, text, current_state):
         if discount_match:
             discount_percentage = float(discount_match.group(1))
             if 0 <= discount_percentage <= 100:
-                success = redis_state.set_global_discount(discount_percentage)
+                success = redis_state.set_brand_discount(discount_percentage)
                 if success:
-                    message = f"✅ Global discount set to {discount_percentage}%"
+                    message = f"✅ Discount set to {discount_percentage}%"
                     send_text_message(sender, message)
-                    logger.info(f"Admin {sender} set global discount to {discount_percentage}%")
+                    logger.info(f"Admin {sender} set discount to {discount_percentage}%")
                 else:
                     send_text_message(sender, "❌ Failed to set discount. Please try again.")
             else:
@@ -267,18 +267,18 @@ def handle_text_message(sender, text, current_state):
         
         # Clear discount command
         if text.lower() in ["clear discount", "remove discount", "discount off"]:
-            success = redis_state.clear_global_discount()
+            success = redis_state.clear_brand_discount()
             if success:
-                send_text_message(sender, "✅ Global discount has been cleared")
-                logger.info(f"Admin {sender} cleared global discount")
+                send_text_message(sender, "✅ Discount has been cleared")
+                logger.info(f"Admin {sender} cleared discount")
             else:
                 send_text_message(sender, "❌ Failed to clear discount. Please try again.")
             return
         
         # Check current discount
         if text.lower() in ["get discount", "discount", "current discount"]:
-            discount_percentage = redis_state.get_global_discount()
-            send_text_message(sender, f"📊 Current global discount: {discount_percentage}%")
+            discount_percentage = redis_state.get_brand_discount()
+            send_text_message(sender, f"📊 Current discount: {discount_percentage}%")
             return
     # Handle order status update commands from staff
     status_update_match = re.search(r'(ready|ontheway|on the way|delivered)\s+[a-z]{3}\d{8}[a-z0-9]{4}', text, re.IGNORECASE)

@@ -53,9 +53,11 @@ async function sendTextMessage(to, message) {
 
 async function sendCatalog(to) {
   logger.info(`Sending catalog to ${to}`);
+  const greeting =
+    brandConfig.catalog_message || '🌟 *Explore Our Organic Products* 🌿\\n\\n';
   const message =
-    '🌟 *Explore Our Organic Products* 🌿\n\n' +
-    'Browse our catalog and add your favourites to the cart.\n\n' +
+    greeting +
+    'Browse our catalog and add your favourites to the cart.\\n\\n' +
     '👇 Tap below to get started!';
 
   const payload = {

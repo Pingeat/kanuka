@@ -255,6 +255,20 @@ def verify_webhook():
         return "Verification failed", 403
 
 
+@webhook_bp.route("/payment-success", methods=["GET"])
+def payment_success():
+    """Handle payment success callback"""
+    logger.info("Payment success callback received.")
+    whatsapp_number = request.args.get("whatsapp")
+    order_id = request.args.get("order_id")
+
+    if whatsapp_number and order_id:
+        confirm_order(whatsapp_number, order_id, "Pay Now")
+        return "Payment confirmed", 200
+    else:
+        logger.error("Missing parameters in payment success callback")
+        return "Missing parameters", 400
+
 # # Razorpay webhook (for production)
 # @webhook_bp.route("/razorpay-webhook-kanuka", methods=["POST"])
 # def razorpay_webhook():
@@ -297,20 +311,19 @@ def verify_webhook():
 
 
 
-@webhook_bp.route("/razorpay-webhook-kanuka", methods=["POST"])
-def razorpay_webhook():
-    """Handle Razorpay payment webhook"""
+@webhook_bp.route("/payment-made", methods=["POST"])
+def payment_made():
+    """Handle Razorpay payment webhook when payment is completed"""
     logger.info("Razorpay webhook received.")
     data = request.get_json()
-    
+
     if data.get("event") == "payment_link.paid":
         payment_data = data.get("payload", {}).get("payment_link", {}).get("entity", {})
         whatsapp_number = payment_data.get("customer", {}).get("contact")
         order_id = payment_data.get("reference_id")
-        
+
         if whatsapp_number and order_id:
-            # send_text_message(whatsapp_number, "✅ Your payment is confirmed! Your order is being processed.")
-            # Confirm the order with correct payment method string
+            send_text_message(whatsapp_number, "✅ Your payment is confirmed! Your order is being processed.")
             confirm_order(whatsapp_number, order_id, "Pay Now")
-    
+
     return "OK", 200

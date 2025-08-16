@@ -19,7 +19,11 @@ async function generateRazorpayLink(amount, orderId) {
         amount: paise,
         currency: 'INR',
         reference_id: orderId,
-        description: `Payment for order ${orderId}`
+        description: `Payment for order ${orderId}`,
+        callback_url:
+          process.env.PAYMENT_SUCCESS_URL ||
+          'https://example.com/payment-success',
+        callback_method: 'get'
       })
     });
     const data = await res.json();

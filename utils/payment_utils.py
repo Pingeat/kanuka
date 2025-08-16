@@ -44,7 +44,7 @@ def generate_payment_link(to, total, order_id, max_retries=3, delay=1):
             "email": False
         },
         "reminder_enable": True,
-        "callback_url": "https://yourdomain.com/razorpay-webhook",
+        "callback_url": "https://yourdomain.com/payment-success",
         "callback_method": "get"
     }
 

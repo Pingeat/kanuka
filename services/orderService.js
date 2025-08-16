@@ -56,7 +56,7 @@ async function placeOrder(
   paymentMethod = 'Cash on Delivery',
   brandId
 ) {
-  const cart = await redisState.getCart(userId);
+  const cart = await redisState.getCart(userId, brandId);
   if (!cart.items.length) {
     return { success: false, message: 'Cart is empty' };
   }
@@ -122,7 +122,7 @@ async function placeOrder(
     }
   }
 
-  await redisState.clearCart(userId);
+  await redisState.clearCart(userId, brandId);
   return { success: true, order_id: orderId, payment_link: order.payment_link };
 }
 

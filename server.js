@@ -3,6 +3,9 @@ const express = require('express');
 const { handleWebhook, verifyWebhook } = require('./handlers/webhookHandler');
 const { startCartReminderScheduler } = require('./schedulers/cartReminder');
 const { startReminderScheduler } = require('./schedulers/reminderScheduler');
+const { getLogger } = require('./utils/logger');
+
+const logger = getLogger('server');
 
 const app = express();
 app.use(express.json());
@@ -16,7 +19,7 @@ app.post('/webhook', handleWebhook);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`Server listening on ${PORT}`);
+  logger.info(`Server listening on ${PORT}`);
 });
 
 startCartReminderScheduler();

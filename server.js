@@ -1,6 +1,7 @@
 const express = require('express');
 const { handleWebhook, verifyWebhook } = require('./handlers/webhookHandler');
 const { startCartReminderScheduler } = require('./schedulers/cartReminder');
+const { startReminderScheduler } = require('./schedulers/reminderScheduler');
 
 const app = express();
 app.use(express.json());
@@ -18,3 +19,4 @@ app.listen(PORT, () => {
 });
 
 startCartReminderScheduler();
+startReminderScheduler();

@@ -89,9 +89,49 @@ class RedisState {
     await this.redis.setex(`user:${userId}:cart`, 86400, JSON.stringify(cart));
   }
 
+  async setAddress(userId, address) {
+    const cart = await this.getCart(userId);
+    cart.address = address;
+    await this.redis.setex(`user:${userId}:cart`, 86400, JSON.stringify(cart));
+  }
+
+  async setGlobalDiscount(percent) {
+    try {
+      await this.redis.set('global:discount', percent);
+    } catch (err) {
+      logger.error(`setGlobalDiscount error: ${err}`);
+    }
+  }
+
+  async getGlobalDiscount() {
+    try {
+      const val = await this.redis.get('global:discount');
+      return val ? parseFloat(val) : null;
+    } catch (err) {
+      logger.error(`getGlobalDiscount error: ${err}`);
+      return null;
+    }
+  }
+
+  async clearGlobalDiscount() {
+    try {
+      await this.redis.del('global:discount');
+    } catch (err) {
+      logger.error(`clearGlobalDiscount error: ${err}`);
+    }
+  }
+
   async createOrder(order) {
     await this.redis.rpush('orders:all', JSON.stringify(order));
     await this.redis.setex(`order:${order.order_id}:active`, 604800, '1');
+  }
+
+  async archiveOrder(order) {
+    try {
+      await this.redis.rpush('orders:archive', JSON.stringify(order));
+    } catch (err) {
+      logger.error(`archiveOrder error: ${err}`);
+    }
   }
 
   async getOrder(orderId) {
@@ -124,6 +164,24 @@ class RedisState {
     const cart = await this.getCart(userId);
     cart.lastReminderDate = dateStr;
     await this.redis.setex(`user:${userId}:cart`, 86400, JSON.stringify(cart));
+  }
+
+  async pushReminder(reminder) {
+    try {
+      await this.redis.rpush('reminders:queue', JSON.stringify(reminder));
+    } catch (err) {
+      logger.error(`pushReminder error: ${err}`);
+    }
+  }
+
+  async popReminder() {
+    try {
+      const data = await this.redis.lpop('reminders:queue');
+      return data ? JSON.parse(data) : null;
+    } catch (err) {
+      logger.error(`popReminder error: ${err}`);
+      return null;
+    }
   }
 }
 

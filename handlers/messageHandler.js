@@ -163,13 +163,15 @@ async function handleButtonReply(sender, id, state) {
 }
 
 async function handleCatalogSelection(sender, productId) {
-  const product = PRODUCT_CATALOG[productId];
+  // Normalize product id to lowercase for lookup to handle case variations
+  const key = String(productId).toLowerCase();
+  const product = PRODUCT_CATALOG[key];
   if (!product) {
     await sendTextMessage(sender, '❌ Product not found');
     return;
   }
   await redisState.addToCart(sender, {
-    id: productId,
+    id: key,
     name: product.name,
     price: product.price,
     quantity: 1

@@ -25,7 +25,9 @@ function setBrandCatalog(brandConfig) {
     delete PRODUCT_CATALOG[key];
   }
   for (const item of brandConfig.catalog || []) {
-    PRODUCT_CATALOG[item.id] = { name: item.name, price: item.price };
+    // Store catalog entries using lowercase ids to allow case-insensitive lookups
+    const key = String(item.id).toLowerCase();
+    PRODUCT_CATALOG[key] = { name: item.name, price: item.price };
   }
 }
 

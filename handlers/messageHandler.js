@@ -83,25 +83,31 @@ async function handleButtonReply(sender, id, state) {
       await redisState.setUserState(sender, { step: STATES.VIEWING_CATALOG });
       break;
     }
-    case 'view_cart': {
-      const cart = await redisState.getCart(sender);
-      await sendCartSummary(sender, cart);
-      await redisState.setUserState(sender, { step: STATES.VIEWING_CART });
+    case 'CONTINUE_SHOPPING': {
+      await sendCatalog(sender);
+      await redisState.setUserState(sender, { step: STATES.VIEWING_CATALOG });
       break;
     }
-    case 'checkout': {
+    case 'PROCEED_TO_CHECKOUT': {
       await sendLocationRequest(sender);
       await redisState.setUserState(sender, { step: STATES.SELECTING_DELIVERY });
       break;
     }
-    case 'pay_cash': {
+    case 'CLEAR_CART': {
+      await redisState.clearCart(sender);
+      await sendTextMessage(sender, '🗑️ Your cart has been cleared.');
+      await sendCatalog(sender);
+      await redisState.setUserState(sender, { step: STATES.VIEWING_CATALOG });
+      break;
+    }
+    case 'PAY_CASH': {
       const result = await placeOrder(sender, 'Delivery', state.address, 'Cash on Delivery');
       if (result.success) {
         await sendOrderConfirmation(sender, result.order_id);
       }
       break;
     }
-    case 'pay_online': {
+    case 'PAY_ONLINE': {
       const result = await placeOrder(sender, 'Delivery', state.address, 'Online');
       if (result.success && result.payment_link) {
         await sendPaymentLink(sender, result.payment_link);

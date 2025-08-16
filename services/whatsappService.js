@@ -160,13 +160,105 @@ async function sendCartSummary(to, cart) {
     await sendTextMessage(to, 'Your cart is empty.');
     return;
   }
-  const lines = cart.items.map(i => `${i.quantity} x ${i.name} = ${i.price * i.quantity}`);
+
+  const lines = cart.items.map(
+    (i) => `${i.quantity} x ${i.name} = ${i.price * i.quantity}`
+  );
   const message = `🛒 *Cart Summary*\n${lines.join('\n')}\nTotal: ${cart.total}`;
-  await sendTextMessage(to, message);
+
+  const payload = {
+    messaging_product: 'whatsapp',
+    recipient_type: 'individual',
+    to,
+    type: 'interactive',
+    interactive: {
+      type: 'button',
+      body: { text: message },
+      action: {
+        buttons: [
+          {
+            type: 'reply',
+            reply: { id: 'CONTINUE_SHOPPING', title: '🛍️ Continue' }
+          },
+          {
+            type: 'reply',
+            reply: { id: 'PROCEED_TO_CHECKOUT', title: '✅ Checkout' }
+          },
+          {
+            type: 'reply',
+            reply: { id: 'CLEAR_CART', title: '🗑️ Clear Cart' }
+          }
+        ]
+      }
+    }
+  };
+
+  try {
+    const res = await fetch(WHATSAPP_API_URL, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${process.env.META_ACCESS_TOKEN}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+    logger.info(`Cart summary template sent. Status: ${res.status}`);
+    if (!res.ok) {
+      const errText = await res.text();
+      logger.error(`Cart summary error: ${errText}`);
+    }
+    return res;
+  } catch (err) {
+    logger.error(`Failed to send cart summary: ${err.message}`);
+    throw err;
+  }
 }
 
 async function sendPaymentOptions(to) {
-  await sendTextMessage(to, 'Choose payment method: cash or online');
+  const message = '💳 *PAYMENT OPTIONS*\n\nHow would you like to pay for your order?';
+
+  const payload = {
+    messaging_product: 'whatsapp',
+    recipient_type: 'individual',
+    to,
+    type: 'interactive',
+    interactive: {
+      type: 'button',
+      body: { text: message },
+      action: {
+        buttons: [
+          {
+            type: 'reply',
+            reply: { id: 'PAY_ONLINE', title: '💳 Pay Online' }
+          },
+          {
+            type: 'reply',
+            reply: { id: 'PAY_CASH', title: '💵 Cash on Delivery' }
+          }
+        ]
+      }
+    }
+  };
+
+  try {
+    const res = await fetch(WHATSAPP_API_URL, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${process.env.META_ACCESS_TOKEN}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+    logger.info(`Payment options sent. Status: ${res.status}`);
+    if (!res.ok) {
+      const errText = await res.text();
+      logger.error(`Payment options error: ${errText}`);
+    }
+    return res;
+  } catch (err) {
+    logger.error(`Failed to send payment options: ${err.message}`);
+    throw err;
+  }
 }
 
 async function sendLocationRequest(to) {
@@ -174,7 +266,48 @@ async function sendLocationRequest(to) {
 }
 
 async function sendBranchSelection(to, branches) {
-  await sendTextMessage(to, `Select branch: ${branches.join(', ')}`);
+  const payload = {
+    messaging_product: 'whatsapp',
+    recipient_type: 'individual',
+    to,
+    type: 'interactive',
+    interactive: {
+      type: 'list',
+      header: { type: 'text', text: 'Select Branch' },
+      body: {
+        text: 'Choose your preferred store branch:'
+      },
+      action: {
+        button: 'Branches',
+        sections: [
+          {
+            title: 'Available Branches',
+            rows: branches.map((b) => ({ id: b, title: b }))
+          }
+        ]
+      }
+    }
+  };
+
+  try {
+    const res = await fetch(WHATSAPP_API_URL, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${process.env.META_ACCESS_TOKEN}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+    logger.info(`Branch selection sent. Status: ${res.status}`);
+    if (!res.ok) {
+      const errText = await res.text();
+      logger.error(`Branch selection error: ${errText}`);
+    }
+    return res;
+  } catch (err) {
+    logger.error(`Failed to send branch selection: ${err.message}`);
+    throw err;
+  }
 }
 
 async function sendPaymentLink(to, link) {

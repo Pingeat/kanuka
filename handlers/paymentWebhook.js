@@ -48,7 +48,15 @@ async function handlePaymentWebhook(req, res) {
 
     if (whatsapp && orderId) {
       const order = await getRedis().getOrder(orderId);
-      const brandId = order?.brand_id || 'kanuka';
+      const brandId = order?.brand_id;
+
+      if (!brandId) {
+        logger.warn(
+          `Skipping notification: brand not found for order ${orderId}`
+        );
+        return res.send('OK');
+      }
+
       const brandConfig = loadBrandConfig(brandId) || {};
       const upper = brandId.toUpperCase();
       const phoneId = process.env[`META_PHONE_NUMBER_ID_${upper}`];

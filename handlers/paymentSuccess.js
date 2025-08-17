@@ -5,10 +5,12 @@ const logger = getLogger('payment_success');
 async function handlePaymentSuccess(req, res) {
   const { whatsapp, order_id } = req.query;
   if (!whatsapp || !order_id) {
+    logger.warn('Payment success missing parameters');
     res.status(400).send('Missing parameters');
     return;
   }
   try {
+    logger.info(`Confirming payment for order ${order_id}`);
     await confirmOrder(whatsapp, order_id, 'Online');
     res.send('Payment confirmed');
   } catch (err) {

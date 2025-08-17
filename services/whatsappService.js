@@ -369,9 +369,59 @@ async function sendPaymentLink(to, link) {
 }
 
 async function sendCartReminder(to, cart) {
-  const items = cart.items.map(i => `${i.quantity} x ${i.name}`).join(', ');
-  const message = `🛍️ You have items waiting in your cart: ${items}. ⚡ Complete your order!`;
-  await sendTextMessage(to, message);
+  if (!cart || !cart.items || cart.items.length === 0) {
+    await sendTextMessage(to, 'Your cart is empty.');
+    return;
+  }
+
+  const lines = cart.items
+    .map((i) => `• ${i.quantity} x ${i.name} = ₹${i.price * i.quantity}`)
+    .join('\n');
+  const message =
+    `⏰ *CART REMINDER*\n${lines}\n*Total*: ₹${cart.total}\n\nWhat would you like to do?`;
+
+  const payload = {
+    messaging_product: 'whatsapp',
+    recipient_type: 'individual',
+    to,
+    type: 'interactive',
+    interactive: {
+      type: 'button',
+      body: { text: message },
+      action: {
+        buttons: [
+          {
+            type: 'reply',
+            reply: { id: 'CONTINUE_SHOPPING', title: '🛍️ Continue' },
+          },
+          {
+            type: 'reply',
+            reply: { id: 'PROCEED_TO_CHECKOUT', title: '💳 Checkout' },
+          },
+        ],
+      },
+    },
+  };
+
+  try {
+    const res = await fetch(WHATSAPP_API_URL, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+    logger.info(`Cart reminder sent. Status: ${res.status}`);
+    if (!res.ok) {
+      const errText = await res.text();
+      logger.error(`Cart reminder error: ${errText}`);
+    }
+    return res;
+  } catch (err) {
+    logger.error(`Failed to send cart reminder: ${err.message}`);
+    throw err;
+  }
 }
 
 async function sendOrderAlert(

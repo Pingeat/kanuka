@@ -6,6 +6,7 @@ function formatMessage(level, name, msg) {
 function getLogger(name) {
   return {
     info: (msg) => console.log(formatMessage('info', name, msg)),
+    warn: (msg) => console.warn(formatMessage('warn', name, msg)),
     error: (msg) => console.error(formatMessage('error', name, msg)),
     debug: (msg) => console.debug(formatMessage('debug', name, msg)),
   };

@@ -11,6 +11,15 @@ const { getLogger } = require('./utils/logger');
 const logger = getLogger('server');
 
 const app = express();
+process.on('uncaughtException', (err) => {
+  logger.error(`Uncaught exception: ${err.stack || err}`);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason) => {
+  logger.error(`Unhandled rejection: ${reason}`);
+});
+
 app.use(
   express.json({
     verify: (req, res, buf) => {
@@ -19,6 +28,11 @@ app.use(
     }
   })
 );
+
+app.use((req, res, next) => {
+  logger.info(`${req.method} ${req.originalUrl}`);
+  next();
+});
 
 // Serve static assets for chat interface
 app.use(express.static(path.join(__dirname, 'public')));
@@ -41,6 +55,15 @@ app.post('/payment-made', handlePaymentWebhook);
 app.post('/message', (req, res) => {
   const { message } = req.body || {};
   res.json({ reply: `Echo: ${message || ''}` });
+});
+
+app.use((req, res) => {
+  res.status(404).json({ error: 'Not Found' });
+});
+
+app.use((err, req, res, next) => {
+  logger.error(`Unhandled error: ${err.stack || err}`);
+  res.status(500).json({ error: 'Internal Server Error' });
 });
 
 const PORT = process.env.PORT || 3000;

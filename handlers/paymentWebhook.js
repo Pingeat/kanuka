@@ -45,8 +45,8 @@ async function handlePaymentWebhook(req, res) {
   const signature = req.get('X-Razorpay-Signature');
   const brandId = signature ? getBrandIdFromSignature(req.rawBody, signature) : null;
   if (!brandId) {
-    logger.warn('Invalid Razorpay signature');
-    res.send('Ignored');
+    logger.warn('Invalid Razorpay signature, ignoring payment');
+    res.status(200).send('Ignored');
     return;
   }
 

@@ -11,6 +11,9 @@ function getRedis() {
 const logger = getLogger('payment_webhook');
 
 function verifySignature(rawBody, signature, secret) {
+  if (!secret || !rawBody || !signature) {
+    return false;
+  }
   const expected = crypto
     .createHmac('sha256', secret)
     .update(rawBody)

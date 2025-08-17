@@ -16,3 +16,10 @@ test('verifySignature rejects incorrect signature', () => {
   const sig = crypto.createHmac('sha256', 'wrong').update(payload).digest('hex');
   assert.ok(!verifySignature(payload, sig, secret));
 });
+
+test('verifySignature returns false when secret is missing', () => {
+  const payload = JSON.stringify({ ok: true });
+  const secret = undefined;
+  const sig = crypto.createHmac('sha256', 'secret').update(payload).digest('hex');
+  assert.strictEqual(verifySignature(payload, sig, secret), false);
+});

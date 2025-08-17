@@ -1,13 +1,22 @@
-const { BRANCH_COORDINATES, DELIVERY_RADIUS_KM, ORDER_STATUS, PRODUCT_CATALOG } = require('../config/settings');
-const redisState = require('../stateHandlers/redisState');
+const {
+  BRANCH_COORDINATES,
+  DELIVERY_RADIUS_KM,
+  ORDER_STATUS,
+  PRODUCT_CATALOG,
+  setBrandCatalog
+} = require('../config/settings');
 const { getLogger } = require('../utils/logger');
 const { generateRazorpayLink } = require('../utils/paymentUtils');
-const {
-  sendOrderAlert,
-  sendOrderConfirmation,
-  sendOrderStatusUpdate
-} = require('./whatsappService');
+const { loadBrandConfig } = require('./brandService');
 const logger = getLogger('order_service');
+
+let redisState = null;
+function getRedisState() {
+  if (!redisState) {
+    redisState = require('../stateHandlers/redisState');
+  }
+  return redisState;
+}
 
 function generateOrderId() {
   return `ORD${Date.now().toString(36).toUpperCase()}`;
@@ -56,7 +65,7 @@ async function placeOrder(
   paymentMethod = 'Cash on Delivery',
   brandId
 ) {
-  const cart = await redisState.getCart(userId, brandId);
+  const cart = await getRedisState().getCart(userId, brandId);
   if (!cart.items.length) {
     return { success: false, message: 'Cart is empty' };
   }
@@ -69,7 +78,7 @@ async function placeOrder(
     cart.branch = branch;
   }
 
-  const discount = brandId ? await redisState.getBrandDiscount(brandId) : null;
+  const discount = brandId ? await getRedisState().getBrandDiscount(brandId) : null;
   const actualTotal = cart.items.reduce(
     (sum, i) => sum + i.price * i.quantity,
     0
@@ -94,6 +103,7 @@ async function placeOrder(
     delivery_address: address || cart.address,
     payment_method: paymentMethod,
     branch: cart.branch,
+    brand_id: brandId,
     order_date: new Date().toISOString()
   };
 
@@ -101,9 +111,10 @@ async function placeOrder(
     order.payment_link = await generateRazorpayLink(total, orderId, userId);
   }
 
-  await redisState.createOrder(order);
+  await getRedisState().createOrder(order);
 
   if (order.branch && paymentMethod === 'Cash on Delivery') {
+    const { sendOrderAlert } = require('./whatsappService');
     try {
       await sendOrderAlert(
         order.branch,
@@ -122,13 +133,13 @@ async function placeOrder(
     }
   }
 
-  await redisState.clearCart(userId, brandId);
+  await getRedisState().clearCart(userId, brandId);
   return { success: true, order_id: orderId, payment_link: order.payment_link };
 }
 
 async function processPayment(userId, orderId) {
   logger.info(`Processing payment for ${userId} and order ${orderId}`);
-  const order = await redisState.getOrder(orderId);
+  const order = await getRedisState().getOrder(orderId);
   if (!order) {
     return { success: false, message: 'Order not found' };
   }
@@ -152,22 +163,33 @@ async function updateOrderStatusFromCommand(command) {
   const parts = lower.split(/\s+/);
   const orderId = parts[parts.length - 1].toUpperCase();
   if (!status || !orderId) return { success: false, message: 'Invalid command' };
-  const order = await redisState.getOrder(orderId);
+  const order = await getRedisState().getOrder(orderId);
   if (!order) return { success: false, message: 'Order not found' };
-  const ok = await redisState.updateOrderStatus(orderId, status);
+  const ok = await getRedisState().updateOrderStatus(orderId, status);
   if (!ok) return { success: false, message: 'Update failed' };
+  const { sendOrderStatusUpdate } = require('./whatsappService');
   await sendOrderStatusUpdate(order.user_id, orderId, status);
   if (status === ORDER_STATUS.DELIVERED) {
-    await redisState.archiveOrder(order);
+    await getRedisState().archiveOrder(order);
   }
   return { success: true, message: `Order ${orderId} status updated` };
 }
 
 async function confirmOrder(whatsappNumber, orderId, paymentMethod = 'Online') {
   logger.info(`Confirming order ${orderId} for ${whatsappNumber}`);
-  const order = await redisState.getOrder(orderId);
+  const order = await getRedisState().getOrder(orderId);
   if (!order) return { success: false };
-  await redisState.updateOrderStatus(orderId, ORDER_STATUS.PAID);
+  const { sendOrderAlert, sendOrderConfirmation, setBrandContext } = require('./whatsappService');
+  const brandId = order.brand_id || 'kanuka';
+  const brandConfig = loadBrandConfig(brandId) || {};
+  const upper = brandId.toUpperCase();
+  const phoneId = process.env[`META_PHONE_NUMBER_ID_${upper}`];
+  const catalogId = process.env[`CATALOG_ID_${upper}`];
+  const accessToken = process.env[`META_ACCESS_TOKEN_${upper}`];
+  setBrandContext(brandConfig, phoneId, catalogId, accessToken);
+  setBrandCatalog(brandConfig);
+
+  await getRedisState().updateOrderStatus(orderId, ORDER_STATUS.PAID);
   if (order.branch) {
     await sendOrderAlert(
       order.branch,

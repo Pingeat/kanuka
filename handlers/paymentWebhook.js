@@ -25,11 +25,19 @@ function getBrandIdFromSignature(rawBody, signature) {
   const files = fs.readdirSync(brandsDir);
   for (const file of files) {
     const brandId = path.basename(file, '.json');
+    // Skip the default brand; it will be checked separately as a fallback
+    if (brandId === 'kanuka') continue;
     const secret = process.env[`RAZORPAY_WEBHOOK_SECRET_${brandId.toUpperCase()}`];
     if (secret && verifySignature(rawBody, signature, secret)) {
       return brandId;
     }
   }
+
+  const defaultSecret = process.env.RAZORPAY_WEBHOOK_SECRET_KANUKA;
+  if (defaultSecret && verifySignature(rawBody, signature, defaultSecret)) {
+    return 'kanuka';
+  }
+
   return null;
 }
 
@@ -38,7 +46,7 @@ async function handlePaymentWebhook(req, res) {
   const brandId = signature ? getBrandIdFromSignature(req.rawBody, signature) : null;
   if (!brandId) {
     logger.warn('Invalid Razorpay signature');
-    res.status(400).send('Invalid signature');
+    res.send('Ignored');
     return;
   }
 

@@ -25,6 +25,12 @@ async function handlePaymentWebhook(req, res) {
   const { setBrandCatalog } = require('../config/settings');
   const signature = req.get('X-Razorpay-Signature');
   const secret = process.env.RAZORPAY_WEBHOOK_SECRET;
+  if (!secret) {
+    logger.error('Razorpay webhook secret is not configured');
+    res.status(500).send('Server misconfigured');
+    return;
+  }
+
   if (!signature || !verifySignature(req.rawBody, signature, secret)) {
     logger.warn('Invalid Razorpay signature, ignoring payment');
     res.status(200).send('Ignored');

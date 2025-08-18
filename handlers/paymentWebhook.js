@@ -34,7 +34,26 @@ async function handlePaymentWebhook(req, res) {
   const { loadBrandConfig } = require('../services/brandService');
   const { setBrandCatalog } = require('../config/settings');
   const signature = req.get('X-Razorpay-Signature');
-  const secret = process.env.RAZORPAY_WEBHOOK_SECRET;
+  const data = req.body || {};
+  const payment = data.payload?.payment_link?.entity || {};
+  const orderId = payment.reference_id;
+
+  let order = null;
+  let brandId = null;
+  let secret = process.env.RAZORPAY_WEBHOOK_SECRET;
+
+  if (orderId) {
+    order = await getRedis().getOrder(orderId);
+    brandId = order?.brand_id;
+    if (brandId) {
+      const brandSecret =
+        process.env[`RAZORPAY_WEBHOOK_SECRET_${brandId.toUpperCase()}`];
+      if (brandSecret) {
+        secret = brandSecret;
+      }
+    }
+  }
+
   if (!secret) {
     logger.error('Razorpay webhook secret is not configured');
     res.status(500).send('Server misconfigured');
@@ -47,16 +66,10 @@ async function handlePaymentWebhook(req, res) {
     return;
   }
 
-  const data = req.body || {};
   if (data.event === 'payment_link.paid') {
-    const payment = data.payload?.payment_link?.entity || {};
     const whatsapp = payment.customer?.contact;
-    const orderId = payment.reference_id;
 
     if (whatsapp && orderId) {
-      const order = await getRedis().getOrder(orderId);
-      const brandId = order?.brand_id;
-
       if (!brandId) {
         logger.warn(
           `Skipping notification: brand not found for order ${orderId}`

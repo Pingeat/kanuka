@@ -11,10 +11,12 @@ corresponding `catalog_id` required by the Meta API.
 
 ### Razorpay webhooks
 
-Configure a single environment variable `RAZORPAY_WEBHOOK_SECRET` used to
-validate all incoming Razorpay webhooks. Set the same secret in the Razorpay
-dashboard when creating the webhook. The handler will determine the correct
-brand based on the order associated with each payment.
+Configure a webhook secret to validate incoming Razorpay webhooks. You can set a
+global secret using `RAZORPAY_WEBHOOK_SECRET` or provide brand specific secrets
+such as `RAZORPAY_WEBHOOK_SECRET_KANUKA` and
+`RAZORPAY_WEBHOOK_SECRET_ZUMI`. When a webhook is received the handler looks up
+the secret for the brand associated with the order and falls back to the global
+secret if a brand specific one is not defined.
 
 Two sample brands are included:
 

@@ -14,11 +14,18 @@ function verifySignature(rawBody, signature, secret) {
   if (!secret || !rawBody || !signature) {
     return false;
   }
+
   const expected = crypto
     .createHmac('sha256', secret)
     .update(rawBody)
     .digest('hex');
-  return expected === signature;
+
+  const expectedBuf = Buffer.from(expected, 'utf8');
+  const signatureBuf = Buffer.from(signature, 'utf8');
+  if (expectedBuf.length !== signatureBuf.length) {
+    return false;
+  }
+  return crypto.timingSafeEqual(expectedBuf, signatureBuf);
 }
 
 async function handlePaymentWebhook(req, res) {

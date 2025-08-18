@@ -32,7 +32,7 @@ async function handlePaymentWebhook(req, res) {
   const { confirmOrder } = require('../services/orderService');
   const { sendTextMessage, setBrandContext } = require('../services/whatsappService');
   const { loadBrandConfig } = require('../services/brandService');
-  const { setBrandCatalog } = require('../config/settings');
+  const { setBrandCatalog, ORDER_STATUS } = require('../config/settings');
   const signature = req.get('X-Razorpay-Signature');
   const data = req.body || {};
   const payment = data.payload?.payment_link?.entity || {};
@@ -70,6 +70,20 @@ async function handlePaymentWebhook(req, res) {
     const whatsapp = payment.customer?.contact;
 
     if (whatsapp && orderId) {
+      if (!order) {
+        logger.warn(
+          `Skipping notification: order not found for payment reference ${orderId}`
+        );
+        return res.send('OK');
+      }
+
+      if (order.status !== ORDER_STATUS.PENDING) {
+        logger.info(
+          `Skipping notification: order ${orderId} already ${order.status}`
+        );
+        return res.send('OK');
+      }
+
       if (!brandId) {
         logger.warn(
           `Skipping notification: brand not found for order ${orderId}`

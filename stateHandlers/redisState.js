@@ -183,9 +183,20 @@ class RedisState {
   }
 
   async updateOrderStatus(orderId, status) {
-    const order = await this.getOrder(orderId);
+    const all = await this.redis.lrange('orders:all', 0, -1);
+    let order = null;
+    let orderJson = null;
+    for (const str of all) {
+      const o = JSON.parse(str);
+      if (o.order_id === orderId) {
+        order = o;
+        orderJson = str;
+        break;
+      }
+    }
     if (!order) return false;
     order.status = status;
+    await this.redis.lrem('orders:all', 0, orderJson);
     await this.redis.rpush('orders:all', JSON.stringify(order));
     return true;
   }

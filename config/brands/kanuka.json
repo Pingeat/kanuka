@@ -8,29 +8,19 @@
   "catalog_message": "🌟 *Explore Our Organic Products* 🌿\n\n",
   "catalog": [
     {
-      "id": "6xpxtkaoau",
-      "name": "Palm Jaggery - Powdered (700gms)",
-      "price": 760.00
+      "id": "2qct1fgb2t",
+      "name": "Palm Jaggery Jar - cubes(350gms)",
+      "price": 455.00
     },
     {
-      "id": "kyygkhdlxf",
-      "name": "Palm Jaggery - Cubes (1 KG)",
-      "price": 1100.00
-    },
-    {
-      "id": "1ado92c3xm",
-      "name": "Palm Jaggery - Powdered(1 KG)",
-      "price": 1100.00
-    },
-    {
-      "id": "36dlxrjdjq",
-      "name": "Palm Jaggery - Powdered(500gms)",
-      "price": 550.00
+      "id": "oqnzitfo9s",
+      "name": "Palm Jaggery Jar - cubes(200gms)",
+      "price": 260.00
     },
     {
       "id": "hkaqqb8sec",
-      "name": "Palm Jaggery - cubes(500gms)",
-      "price": 550.00
+      "name": "Palm Jaggery - Powdered(250gms)",
+      "price": 325.00
     }
   ]
 }

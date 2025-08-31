@@ -33,85 +33,88 @@ async function handlePaymentWebhook(req, res) {
   const { sendTextMessage, setBrandContext } = require('../services/whatsappService');
   const { loadBrandConfig } = require('../services/brandService');
   const { setBrandCatalog, ORDER_STATUS } = require('../config/settings');
-  const signature = req.get('X-Razorpay-Signature');
-  const data = req.body || {};
-  const payment = data.payload?.payment_link?.entity || {};
-  const orderId = payment.reference_id;
 
-  let order = null;
-  let brandId = null;
-  let secret = process.env.RAZORPAY_WEBHOOK_SECRET;
+  try {
+    const signature = req.get('X-Razorpay-Signature');
+    const data = req.body || {};
+    const payment = data.payload?.payment_link?.entity || {};
+    const orderId = payment.reference_id;
 
-  if (orderId) {
-    order = await getRedis().getOrder(orderId);
-    brandId = order?.brand_id;
-    if (brandId) {
-      const brandSecret =
-        process.env[`RAZORPAY_WEBHOOK_SECRET_${brandId.toUpperCase()}`];
-      if (brandSecret) {
-        secret = brandSecret;
+    let order = null;
+    let brandId = null;
+    let secret = process.env.RAZORPAY_WEBHOOK_SECRET;
+
+    if (orderId) {
+      order = await getRedis().getOrder(orderId);
+      brandId = order?.brand_id;
+      if (brandId) {
+        const brandSecret =
+          process.env[`RAZORPAY_WEBHOOK_SECRET_${brandId.toUpperCase()}`];
+        if (brandSecret) {
+          secret = brandSecret;
+        }
       }
     }
-  }
 
-  if (!secret) {
-    logger.error('Razorpay webhook secret is not configured');
-    res.status(500).send('Server misconfigured');
-    return;
-  }
+    if (!secret) {
+      logger.error('Razorpay webhook secret is not configured');
+      return res.status(200).send('Ignored');
+    }
 
-  if (!signature || !verifySignature(req.rawBody, signature, secret)) {
-    logger.warn('Invalid Razorpay signature, ignoring payment');
-    res.status(200).send('Ignored');
-    return;
-  }
+    if (!signature || !verifySignature(req.rawBody, signature, secret)) {
+      logger.warn('Invalid Razorpay signature, ignoring payment');
+      return res.status(200).send('Ignored');
+    }
 
-  if (data.event === 'payment_link.paid') {
-    const whatsapp = payment.customer?.contact;
+    if (data.event === 'payment_link.paid') {
+      const whatsapp = payment.customer?.contact;
 
-    if (whatsapp && orderId) {
-      if (!order) {
-        logger.warn(
-          `Skipping notification: order not found for payment reference ${orderId}`
-        );
-        return res.send('OK');
-      }
+      if (whatsapp && orderId) {
+        if (!order) {
+          logger.warn(
+            `Skipping notification: order not found for payment reference ${orderId}`
+          );
+          return res.send('OK');
+        }
 
-      if (order.status !== ORDER_STATUS.PENDING) {
-        logger.info(
-          `Skipping notification: order ${orderId} already ${order.status}`
-        );
-        return res.send('OK');
-      }
+        if (order.status !== ORDER_STATUS.PENDING) {
+          logger.info(
+            `Skipping notification: order ${orderId} already ${order.status}`
+          );
+          return res.send('OK');
+        }
 
-      if (!brandId) {
-        logger.warn(
-          `Skipping notification: brand not found for order ${orderId}`
-        );
-        return res.send('OK');
-      }
+        if (!brandId) {
+          logger.warn(
+            `Skipping notification: brand not found for order ${orderId}`
+          );
+          return res.send('OK');
+        }
 
-      const brandConfig = loadBrandConfig(brandId) || {};
-      const upper = brandId.toUpperCase();
-      const phoneId = process.env[`META_PHONE_NUMBER_ID_${upper}`];
-      const catalogId = process.env[`CATALOG_ID_${upper}`];
-      const accessToken = process.env[`META_ACCESS_TOKEN_${upper}`];
-      setBrandContext(brandConfig, phoneId, catalogId, accessToken);
-      setBrandCatalog(brandConfig);
+        const brandConfig = loadBrandConfig(brandId) || {};
+        const upper = brandId.toUpperCase();
+        const phoneId = process.env[`META_PHONE_NUMBER_ID_${upper}`];
+        const catalogId = process.env[`CATALOG_ID_${upper}`];
+        const accessToken = process.env[`META_ACCESS_TOKEN_${upper}`];
+        setBrandContext(brandConfig, phoneId, catalogId, accessToken);
+        setBrandCatalog(brandConfig);
 
-      try {
-        await sendTextMessage(
-          whatsapp,
-          '✅ Your payment is confirmed! Your order is being processed.'
-        );
-        await confirmOrder(whatsapp, orderId, 'Online');
-      } catch (err) {
-        logger.error(`Payment webhook processing failed: ${err.message}`);
+        try {
+          await sendTextMessage(
+            whatsapp,
+            '✅ Your payment is confirmed! Your order is being processed.'
+          );
+          await confirmOrder(whatsapp, orderId, 'Online');
+        } catch (err) {
+          logger.error(`Payment webhook processing failed: ${err.message}`);
+        }
       }
     }
+  } catch (err) {
+    logger.error(`Unhandled payment webhook error: ${err.stack || err}`);
   }
 
-  res.send('OK');
+  return res.send('OK');
 }
 
 module.exports = { handlePaymentWebhook, verifySignature };

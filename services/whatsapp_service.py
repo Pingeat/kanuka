@@ -95,9 +95,11 @@ def send_catalog(to):
     """Send catalog message using WhatsApp Catalog"""
     logger.info(f"Sending catalog to {to}")
     
-    message = "🌟 *EXPLORE OUR PRODUCTS*\n\n" \
-             "Browse our catalog and select items to add to your cart.\n\n" \
-             "Tap the button below to view our catalog:"
+    message = (
+        "🌟 *EXPLORE OUR PRODUCTS*\n\n"
+        "Discover our catalog and add items you love to your cart.\n\n"
+        "👇 Tap the button below to start shopping!"
+    )
     
     payload = {
         "messaging_product": "whatsapp",

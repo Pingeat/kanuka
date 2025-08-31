@@ -328,6 +328,12 @@ async function sendBranchSelection(to, branches) {
   }
 }
 
+async function sendPaymentProcessing(to) {
+  const message =
+    '🔄 *GENERATING PAYMENT LINK*\n\nPlease wait a moment while we create your secure payment link...';
+  return sendTextMessage(to, message);
+}
+
 async function sendPaymentLink(to, link) {
   const token = link.split('/').pop();
   const payload = {
@@ -500,6 +506,7 @@ module.exports = {
   sendPaymentOptions,
   sendLocationRequest,
   sendBranchSelection,
+  sendPaymentProcessing,
   sendPaymentLink,
   sendOrderAlert,
   sendOrderStatusUpdate,

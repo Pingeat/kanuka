@@ -8,6 +8,7 @@ const {
   sendPaymentOptions,
   sendLocationRequest,
   sendBranchSelection,
+  sendPaymentProcessing,
   sendPaymentLink,
   setBrandContext
 } = require('../services/whatsappService');
@@ -151,7 +152,14 @@ async function handleButtonReply(sender, id, state, brandId) {
       break;
     }
     case 'PAY_ONLINE': {
-      const result = await placeOrder(sender, 'Delivery', state.address, 'Online', brandId);
+      await sendPaymentProcessing(sender);
+      const result = await placeOrder(
+        sender,
+        'Delivery',
+        state.address,
+        'Online',
+        brandId
+      );
       if (result.success && result.payment_link) {
         await sendPaymentLink(sender, result.payment_link);
       }

@@ -67,7 +67,15 @@ class RedisState {
     const b = this._brandKey(brandId);
     // item: { id, name, price, quantity }
     const cart = await this.getCart(userId, b);
-    cart.items.push(item);
+
+    // Check if item already exists in cart; if so, increment quantity
+    const existing = cart.items.find((i) => i.id === item.id);
+    if (existing) {
+      existing.quantity += item.quantity;
+    } else {
+      cart.items.push(item);
+    }
+
     cart.total = cart.items.reduce((sum, i) => sum + i.price * i.quantity, 0);
     cart.lastAdded = new Date().toISOString();
     cart.lastReminderDate = null;

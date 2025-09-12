@@ -170,7 +170,13 @@ async function handleButtonReply(sender, id, state, brandId) {
   }
 }
 
-async function handleCatalogSelection(sender, productId, brandId) {
+async function handleCatalogSelection(
+  sender,
+  productId,
+  brandId,
+  quantity = 1,
+  showSummary = true
+) {
   // Normalize product id to lowercase for lookup to handle case variations
   const key = String(productId).toLowerCase();
   const product = PRODUCT_CATALOG[key];
@@ -178,15 +184,21 @@ async function handleCatalogSelection(sender, productId, brandId) {
     await sendTextMessage(sender, '❌ Product not found');
     return;
   }
-  await redisState.addToCart(sender, {
-    id: key,
-    name: product.name,
-    price: product.price,
-    quantity: 1
-  }, brandId);
-  const cart = await redisState.getCart(sender, brandId);
-  await sendCartSummary(sender, cart);
-  await redisState.setUserState(sender, { step: STATES.VIEWING_CART }, brandId);
+  await redisState.addToCart(
+    sender,
+    {
+      id: key,
+      name: product.name,
+      price: product.price,
+      quantity: quantity,
+    },
+    brandId
+  );
+  if (showSummary) {
+    const cart = await redisState.getCart(sender, brandId);
+    await sendCartSummary(sender, cart);
+    await redisState.setUserState(sender, { step: STATES.VIEWING_CART }, brandId);
+  }
 }
 
 async function handleIncomingMessage(data) {
@@ -226,8 +238,18 @@ async function handleIncomingMessage(data) {
         } else if (type === 'order') {
           const items = msg.order.product_items || [];
           for (const item of items) {
-            await handleCatalogSelection(sender, item.product_retailer_id, brandId);
+            const quantity = parseInt(item.quantity, 10) || 1;
+            await handleCatalogSelection(
+              sender,
+              item.product_retailer_id,
+              brandId,
+              quantity,
+              false
+            );
           }
+          const cart = await redisState.getCart(sender, brandId);
+          await sendCartSummary(sender, cart);
+          await redisState.setUserState(sender, { step: STATES.VIEWING_CART }, brandId);
         } else if (type === 'location') {
           const { latitude, longitude } = msg.location;
           await redisState.setLocation(sender, latitude, longitude, brandId);

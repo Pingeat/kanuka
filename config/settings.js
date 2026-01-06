@@ -7,7 +7,7 @@ const BRANCH_COORDINATES = {
   'West Maredpally': [17.4558529177458, 78.50727064061495]
 };
 
-const DELIVERY_RADIUS_KM = 6.0;
+const DELIVERY_RADIUS_KM = 1000.00;
 
 const ORDER_STATUS = {
   PENDING: 'Pending',

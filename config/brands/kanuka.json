@@ -1,26 +1,16 @@
 {
-  "name": "Kanuka Organics",
+  "name": "URU Farms",
   "logo_url": "https://kanukaorganics.com/logo.png",
   "bulk_contact": {
     "phone": "+919226454238",
     "email": "hello@kanukaorganics.com"
   },
-  "catalog_message": "🌟 *Explore Our Organic Products* 🌿\n\n",
+  "catalog_message": "🌟 *Explore Our Products* 🌿\n\n",
   "catalog": [
     {
-      "id": "2qct1fgb2t",
-      "name": "Palm Jaggery Jar - cubes(350gms)",
-      "price": 455.00
-    },
-    {
-      "id": "oqnzitfo9s",
-      "name": "Palm Jaggery Jar - cubes(200gms)",
-      "price": 260.00
-    },
-    {
-      "id": "hkaqqb8sec",
-      "name": "Palm Jaggery - Powdered(250gms)",
-      "price": 325.00
+      "id": "okss9927h1",
+      "name": "A2 Sahiwal Cow - Cultured Ghee",
+      "price": 2500.00
     }
   ]
 }
